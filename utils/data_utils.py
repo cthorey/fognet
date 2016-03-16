@@ -1,3 +1,4 @@
+
 import pandas as pd
 import numpy as np
 
@@ -71,7 +72,7 @@ def add_group_column_to_data(df):
     return df
 
 
-def train_val_test_split(df):
+def train_val_test_split(df, labels):
     ''' Return a train/val/test split of the data '''
 
     df = add_group_column_to_data(df)
@@ -94,6 +95,8 @@ def train_val_test_split(df):
     test = test.join(labels[labels.index.isin(test.index)])
     print('Le test is composed by %d group and %d observation' %
           (test.groupby('group').ngroups, len(test)))
+
+    return train, val, test
 
 
 if __name__ == '__main__':
