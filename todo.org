@@ -1,0 +1,9 @@
+FOGNET -*- mode: org -*-
+
+#+TITLE: Fog net competition
+#+AUTHOR: Clement Thorey
+
+* TODO Regorganize the following 
+* TODO Done the file
+  * dee
+        

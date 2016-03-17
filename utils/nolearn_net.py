@@ -124,23 +124,6 @@ class NeuralNet(BaseNeuralNet):
         for func in on_training_finished:
             func(self, self.train_history_)
 
-    def predict_proba(self, split):
-        probas = []
-        which_batch_iterator = {'test': self.batch_iterator_test,
-                                'train': self.batch_iterator_train}
-        for Xb, yb in which_batch_iterator[split]:
-            probas.append(self.apply_batch_func(self.predict_iter_, Xb))
-        return np.vstack(probas)
-
-    def predict(self, split='test'):
-        if self.regression:
-            return self.predict_proba(split)
-        else:
-            y_pred = np.argmax(self.predict_proba(), axis=1)
-            if self.use_label_encoder:
-                y_pred = self.enc_.inverse_transform(y_pred)
-            return y_pred
-
     def get_output(self, layer):
         if isinstance(layer, basestring):
             layer = self.layers_[layer]
@@ -162,13 +145,27 @@ class NeuralNet(BaseNeuralNet):
             outputs.append(get_activity(Xb))
         return np.vstack(outputs)
 
-    def score(self, split='test'):
-        ''' Return the RMSE root mean squared error '''
+    def predict(self, Xb):
+        return self.apply_batch_func(self.predict_iter_, Xb)
+
+    def predict_whole_set(self, split):
+        probas = []
+        which_batch_iterator = {'test': self.batch_iterator_test,
+                                'train': self.batch_iterator_train}
+        for Xb, yb in which_batch_iterator[split]:
+            probas.append(self.predict(Xb, yb))
+        return np.vstack(probas)
+
+    def get_score(self, Xb, yb):
         score = mean_squared_error if self.regression else accuracy_score
+        return float(np.sqrt(score(self.predict(Xb), yb)))
+
+    def get_score_whole_set(self, split='test'):
+        ''' Return the RMSE root mean squared error '''
+
         which_batch_iterator = {'test': self.batch_iterator_test,
                                 'train': self.batch_iterator_train}
         scores = []
         for Xb, yb in which_batch_iterator[split]:
-            scores.append(
-                score(self.apply_batch_func(self.predict_iter_, Xb), yb))
+            scores.append(self.get_score(Xb, yb))
         return float(np.sqrt(np.array(scores).mean()))
