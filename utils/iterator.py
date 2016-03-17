@@ -35,20 +35,20 @@ class BaseBatchIterator(object):
         return self
 
     def stack_sequence(self):
-        ''' 
-        This function allows to take the training dataframe, and 
-        return a dict of (X,y) tupple. Each key correspond to a 
-        different group - define above. Each group is consituted by a 
-        continuous sequence of observation (2H lags). 
+        '''
+        This function allows to take the training dataframe, and
+        return a dict of (X,y) tupple. Each key correspond to a
+        different group - define above. Each group is consituted by a
+        continuous sequence of observation (2H lags).
         For each group, we input a dataframe of size (N,D). N obs/ D features.
-        We then build sequence of observation from it. A trivial 
+        We then build sequence of observation from it. A trivial
         way to do it is to take df.iloc[0:seq_size],df.iloc[seq_size:2seq_size]
-        and so on. 
+        and so on.
 
-        However, we proceed as for a 1D convolution. For instance, 
+        However, we proceed as for a 1D convolution. For instance,
         if we have [xa,xb,xc,xd,xe,xf] where each x is a D-dimensional vector.
         The X, for a stride of 2 with a size_seq of 4, should be [[xa,xb,xc,xd],[xc,xd,xe,xf]].
-        The number of sequence is given by the simple formula 
+        The number of sequence is given by the simple formula
         n_sequences = (N-seq_size)/stride +1
 
         '''
@@ -67,28 +67,24 @@ class BaseBatchIterator(object):
             nb_seqs = (nb_obs - self.seq_size) / self.stride + 1
 
             # Begin of the processing
+            X = np.zeros((nb_seqs, self.seq_size, self.nfeats))
+            y = np.zeros((nb_seqs, self.seq_size))
+            idx_y = np.zeros((nb_seqs, self.seq_size))
             for k in range(nb_seqs):
                 kmin = k * self.stride  # lower bound window
                 kmax = k * self.stride + self.seq_size  # Upper boud window
-                X_tmp = np.array(gp[self.feats].iloc[kmin:kmax])[
-                    np.newaxis, :]  # Get the X
-                y_tmp = np.array(gp[self.labels].iloc[kmin:kmax])[
-                    np.newaxis, :]  # Get the y
-                if k == 0:
-                    X = X_tmp
-                    y = y_tmp
-                else:
-                    X = np.vstack((X, X_tmp))  # Stack them
-                    y = np.vstack((y, y_tmp))  # Stack them
+                X[k, :, :] = np.array(gp[self.feats].iloc[kmin:kmax])
+                y[k, :] = np.array(gp[self.labels].iloc[kmin:kmax])
+                idx_y[k, :] = map(int, range(kmin, kmax))
             # At the end, X has a shape (N,T,D)
             # y has a shape (N,T)
-            stack_seqs[key] = (X, y)
+            stack_seqs[key] = (X, y, (idx_y, (nb_seqs, nb_obs)))
         return stack_seqs
 
     def __iter__(self):
         # Iterator
         n_groups = len(self.stack_seqs.keys())  # Nb groups
-        for gp, (X, y) in self.stack_seqs.iteritems():
+        for gp, (X, y, _) in self.stack_seqs.iteritems():
             n_samples = X.shape[0]
             bs = self.batch_size
             n_batches = (n_samples + bs - 1) // bs
