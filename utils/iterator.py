@@ -34,6 +34,7 @@ class BaseBatchIterator(object):
     def __call__(self, df, predict=False):
         self.df = df
         self.stack_seqs = self.stack_sequence()
+        self.predict = predict
         return self
 
     def stack_sequence(self):

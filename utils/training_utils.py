@@ -8,6 +8,11 @@ from utils.hook import (
     PlotTrainingHistory,
     EarlyStopping
 )
+from time import strftime
+
+
+def get_current_datetime():
+    return strftime('%Y%m%d_%H%M%S')
 
 
 def get_model_name(path):
@@ -64,6 +69,14 @@ def initialize_checkpoints(config, hp):
     save_training_history = SaveTrainingHistory(model_history_fname)
     plot_training_history = PlotTrainingHistory(model_graph_fname)
     early_stopping = EarlyStopping(patience=config['patience'])
+
+    # Add some useful key to the config file
+    config['folder'] = fname
+    config['model_name'] = name
+    config['model_fname'] = model_fname
+    config['model_history_fname'] = model_history_fname
+    config['model_graph_fname'] = model_graph_fname
+
     dump_conf_file(config, fname)
 
     return model_fname, save_weights, save_training_history, plot_training_history, early_stopping

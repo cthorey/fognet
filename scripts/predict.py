@@ -4,73 +4,80 @@ from time import strftime
 import numpy as np
 import pandas as pd
 import cPickle as pickle
+from utils.training_utils import *
+from utils.data_utils import *
+from utils.nolearn_net import NeuralNet
+from utils.prediction_utils import prediction
+import json
+import theano
+import theano.tensor as T
+import lasagne
 
+################################################################
+# Parse parameters
+parser = argparse.ArgumentParser()
+parser.add_argument('--conf', required=True, help='Conf file for model')
 
-def load_data(fname):
-    n = 6925
-    size = int(fname.split('_')[0])
-    X_fname = 'cache/X_test_%s.npy' % fname
-    X_shape = (n, 3, size, size)
+################################################################
+# Get the parameters from the file
+# get the path where the conf file for the model is stored
+config = vars(parser.parse_args())
+# get the model parameters and store them in a ditct
+config.update(parse_conf_file(config['conf']))
 
-    X = np.memmap(X_fname, dtype=np.float32, mode='r', shape=X_shape)
-    return X
+################################################################
+# Output file to store the submission
+output_fname = os.path.join(
+    config['folder'], 'submissions_%s.csv' % get_current_datetime())
+print 'Will write output to %s' % output_fname
 
+################################################################
+# Load the iterator for prediction
+print '\n Loading data iterator using : %s \n' % config['processing']
+nb_features, _, _, batch_ite_pred = load_data(
+    name=config['name'], feats=config['feats'], processing=config['processing'])
 
-def load_model(fname):
-    model = importlib.import_module('model_definitions.%s' % fname)
-    return model
+################################################################
+# Build the architecture
+print '\n Build the architecture: %s, %s\n' % (config['model'], config['architecture'])
+model = importlib.import_module(
+    'model_defs.%s' % config['model'])
+builder = getattr(model, config['architecture'])
+architecture = builder(D=nb_features, H=config[
+                       'hiddens'], grad_clip=config['grad_clip'])
 
+################################################################
+# Initialize  the model
+print '\n Initialize the network \n '
+net = NeuralNet(
+    layers=architecture,
+    regression=True,
+    objective_loss_function=getattr(
+        lasagne.objectives, config['loss_function']),
+    objective_l2=config['reg'],  # L2 regularization
+    update=getattr(lasagne.updates, config['update_rule']),
+    update_learning_rate=config['lr'],
+    verbose=config['verbose'],
+    max_epochs=10000,
+)
+net.initialize()
 
-def load_encoder(fname='models/encoder.pkl'):
-    encoder = pickle.load(open(fname, 'r'))
-    return encoder
+################################################################
+# Load the model
+print 'Loading model weights from %s' % config['model_fname']
+net.load_weights_from(config['model_fname'])
 
+################################################################
+# Predict the yield for the whole prediction set
+print 'Run the prediction'
+final_pred = prediction(net, batch_ite_pred)
 
-def get_current_datetime():
-    return strftime('%Y%m%d_%H%M%S')
+################################################################
+# Merge and produce  the submission file
+submission_df = load_raw_data()['submission_format']
+final_pred_format = submission_df.join(final_pred, how='left')
+submission_df['yield'] = final_pred_format['yield_pred']
 
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--model', required=True)
-    args = parser.parse_args()
-
-    output_fname = 'submissions/%s.csv' % get_current_datetime()
-    print 'Will write output to %s' % output_fname
-    print
-
-    print 'Loading sample submission'
-    sample_df = pd.read_csv('data/sample_submission.csv')
-    print
-
-    print 'Loading encoder'
-    encoder = load_encoder()
-    classes = map(lambda x: 'whale_%05d' % x, encoder.classes_)
-
-    print 'Loading model: %s' % args.model
-    model = load_model(args.model)
-    net = model.net
-    net.initialize()
-    print 'Loading model weights from %s' % model.model_fname
-    net.load_weights_from(model.model_fname)
-    print
-
-    print 'Loading data: %s' % args.data
-    X = load_data(args.data)
-    print
-
-    print 'Predicting...'
-    y_test_pred_proba = net.predict_proba(X)
-    print
-
-    print 'Assembling final dataframe'
-    fnames = sample_df[['Image']].values
-    values = np.hstack([fnames, y_test_pred_proba])
-    submission_df = pd.DataFrame(values, columns=['Image'] + classes)
-
-    print submission_df.head(1)
-    print
-    print len(submission_df.columns)
-    print
-
-    submission_df.to_csv(output_fname, index=False)
+################################################################
+# Store to a txt file
+submission_df.to_csv(output_fname, index=False)

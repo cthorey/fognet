@@ -8,7 +8,6 @@ import argparse
 import os
 import sys
 import importlib
-from time import strftime
 
 import json
 import theano
@@ -36,6 +35,7 @@ parser.add_argument('--continue_training', action='store_true')
 config = vars(parser.parse_args())
 # Parse the model_conf file (baseline)
 config.update(parse_conf_file(config['conf']))
+config['time'] = get_current_datetime()
 
 ################################################################
 # Load the iterator

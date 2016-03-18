@@ -16,19 +16,19 @@ def load_raw_data():
 
     name = os.path.join(
         fognet, 'data', '8272b5ce-19e4-4dbd-80f2-d47e14786fa2.csv')
-    micro_train_5m = pd.read_csv(name, index_col=0, parse_dates=[0])
+    microclimat_train_5m = pd.read_csv(name, index_col=0, parse_dates=[0])
 
     name = os.path.join(
         fognet, 'data', 'ba94c953-7381-4d3c-9cd9-a8c9642ecff5.csv')
-    micro_test_5m = pd.read_csv(name, index_col=0, parse_dates=[0])
+    microclimat_test_5m = pd.read_csv(name, index_col=0, parse_dates=[0])
 
     name = os.path.join(
         fognet, 'data', 'eaa4fe4a-b85f-4088-85ee-42cabad25c81.csv')
-    micro_train = pd.read_csv(name, index_col=0, parse_dates=[0])
+    microclimat_train = pd.read_csv(name, index_col=0, parse_dates=[0])
 
     name = os.path.join(
         fognet, 'data', 'fb38df29-e4b7-4331-862c-869fac984cfa.csv')
-    micro_test = pd.read_csv(name, index_col=0, parse_dates=[0])
+    microclimat_test = pd.read_csv(name, index_col=0, parse_dates=[0])
 
     name = os.path.join(
         fognet, 'data', '41d4a6af-93df-48ab-b235-fd69c8e5dab9.csv')
@@ -49,14 +49,14 @@ def load_raw_data():
     name = os.path.join(fognet, 'data', 'submission_format.csv')
     submission_format = pd.read_csv(name, index_col=0, parse_dates=[0])
 
-    return {'micro_train': micro_train,
-            'micro_test': micro_test,
-            'micro_train_5m': micro_train_5m,
-            'micro_test_5m': micro_test_5m,
+    return {'microclimat_train': microclimat_train,
+            'microclimat_test': microclimat_test,
+            'microclimat_train_5m': microclimat_train_5m,
+            'microclimat_test_5m': microclimat_test_5m,
             'macro_guelmim': macro_guelmim,
             'macro_sidi': macro_sidi,
             'macro_aga': macro_aga,
-            'micro_train_y': labels,
+            'labels': labels,
             'submission_format': submission_format}
 
 
@@ -162,6 +162,25 @@ def prediction_split(df_train, df_to_predict, n_obs=24):
     return dfprediction
 
 
+def build_dataset(data, name):
+    ''' build micro data
+    Be carrefull, all the submission date are not contained
+    in the test set. Maybe use interpilation ! 
+    '''
+
+    data = load_raw_data()
+    if name == 'micro':
+        train = data['microclimat_train']
+        train_y = data['labels']
+        sub_format = data['submission_format']
+        test = sub_format.join(data['microclimat_test'], how='left')
+        test = test[data['microclimat_test'].columns]
+
+    else:
+        raise ValueError('The data format %s is not impemented yet' % (name))
+    return train, train_y, test
+
+
 class MyImputer(Imputer):
 
     def df_transform(self, df):
@@ -175,13 +194,12 @@ class Data(object):
 
     def __init__(self, name, feats):
         self.data = load_raw_data()
-        self.train = self.data[name + '_train']
-        self.train_y = self.data[name + '_train_y']
-        self.prediction = self.data[name + '_test']
+        self.train, self.train_y, self.prediction = build_dataset(
+            self.data, name)
         self.inputer = MyImputer(strategy='mean')
         self.feats = feats
 
-    def benchmark(self, n_obs=24):
+    def benchmark(self, n_obs=12):
         ''' process data for the benchmark
 
         n_obs : Number of observation to incorporate before

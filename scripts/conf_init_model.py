@@ -15,7 +15,8 @@ conf = {}
 # Model definition
 # Iterator
 conf['name'] = 'micro'
-conf['feats'] = ['humidity', 'temp']
+conf['feats'] = ['percip_mm', 'humidity', 'temp', 'leafwet450_min',
+                 'leafwet460_min', 'leafwet_lwscnt', 'gusts_ms', 'wind_dir', 'wind_ms']
 conf['processing'] = 'benchmark'
 
 # Architecture
@@ -27,7 +28,7 @@ conf['grad_clip'] = 10
 conf['loss_function'] = 'squared_error'
 conf['update_rule'] = 'adam'
 conf['verbose'] = 11
-conf['nb_epochs'] = 1
+conf['nb_epochs'] = 500
 conf['patience'] = 150
 
 dir_new_model = get_model_name(os.path.join(fognet, 'models', conf['model']))
@@ -37,6 +38,7 @@ try:
 except:
     raise ValueError(
         'Cannot create the directory for the model %s' % (dir_new_model))
+
 
 conf['root'] = dir_new_model
 dump_conf_file(conf, dir_new_model)

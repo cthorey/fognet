@@ -10,13 +10,20 @@ Leaderboard : https://www.drivendata.org/competitions/9/leaderboard/
 
 ** DONE Tchequer si le model est bien capable de splitter si il ya  des diff de 4H au lieu de 2H !
    CLOSED: [2016-03-18 Fri 12:00]
-
 ** DONE Deal with the inputer stuff. Has to be train of training and use for  testing afterwards.
    CLOSED: [2016-03-18 Fri 12:54]
-** TODO Incorporer load_data ( name et feats et autre dans le config)
+** DONE Incorporer load_data ( name et feats et autre dans le config)
+   CLOSED: [2016-03-18 Fri 16:24]
+** TODO Bien verrifier ce que sort les iterators 
+
+** TODO Construitre pe pred iterator sur le submission format, pas sur le testing (il y a des trou de dans qui doive passer dans )
+** TODO Verrifier que le net se comporte bien a test time !
+** TODO Construct the predict finction
 
 ** TODO On s'occupe pas du test set encore ? Pk ??
 
+
+** 
 
 
 * Sequence processing
@@ -28,7 +35,8 @@ dheozhdieo [[http://orgmode.org/worg/org-tutorials/orgtutorial_dto.html]]
 
 * Prediciton test test
 
-** TODO Implement batch iterator for testing.
+** DONE Implement batch iterator for testing.
+   CLOSED: [2016-03-18 Fri 16:23]
 
 * To thinck about
 
