@@ -5,5 +5,4 @@ FOGNET -*- mode: org -*-
 
 * TODO Regorganize the following 
 * TODO Done the file
-  * dee
-        
+          
