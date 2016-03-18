@@ -14,11 +14,14 @@ Leaderboard : https://www.drivendata.org/competitions/9/leaderboard/
    CLOSED: [2016-03-18 Fri 12:54]
 ** DONE Incorporer load_data ( name et feats et autre dans le config)
    CLOSED: [2016-03-18 Fri 16:24]
-** TODO Bien verrifier ce que sort les iterators 
+** TODO [#A] Bien verrifier ce que sort les iterators 
 
-** TODO Construitre pe pred iterator sur le submission format, pas sur le testing (il y a des trou de dans qui doive passer dans )
-** TODO Verrifier que le net se comporte bien a test time !
-** TODO Construct the predict finction
+** DONE Construitre pe pred iterator sur le submission format, pas sur le testing (il y a des trou de dans qui doive passer dans )
+   CLOSED: [2016-03-18 Fri 17:44]
+** TODO Verrifier que le net se comporte bien a test time dans nolearn_net ? determinitisc o what ?!
+** TODO Verrifier ce que sort le submission.txt
+** DONE Construct the predict finction
+   CLOSED: [2016-03-18 Fri 17:45]
 
 ** TODO On s'occupe pas du test set encore ? Pk ??
 

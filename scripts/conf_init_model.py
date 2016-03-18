@@ -28,7 +28,7 @@ conf['grad_clip'] = 10
 conf['loss_function'] = 'squared_error'
 conf['update_rule'] = 'adam'
 conf['verbose'] = 11
-conf['nb_epochs'] = 500
+conf['nb_epochs'] = 80
 conf['patience'] = 150
 
 dir_new_model = get_model_name(os.path.join(fognet, 'models', conf['model']))

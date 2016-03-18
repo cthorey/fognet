@@ -25,9 +25,9 @@ from utils.training_utils import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--conf', required=True, help='Baseline conf file')
-parser.add_argument('--reg', default=1e-7, help='l2 reg parameter')
-parser.add_argument('--lr', default=1e-4, help='learning rate')
-parser.add_argument('--hiddens', default=150, help='Number of units')
+parser.add_argument('--reg', default=1e-7, help='l2 reg parameter', type=float)
+parser.add_argument('--lr', default=1e-4, help='learning rate', type=float)
+parser.add_argument('--hiddens', default=150, help='Number of units', type=int)
 parser.add_argument('--overwrite', action='store_true', default=True)
 parser.add_argument('--continue_training', action='store_true')
 

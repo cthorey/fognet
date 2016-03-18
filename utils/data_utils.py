@@ -96,7 +96,7 @@ def train_val_test_split(df, labels):
 
     df = add_group_column_to_data(df)
     df['set'] = 'train'
-    group_train = ['group' + str(i) for i in range(20)]
+    group_train = ['group' + str(i) for i in range(25)]
     # I remove it as there is only Nan in that group
     group_train.remove('group0')
     train = df[df.group.isin(group_train)]
@@ -104,13 +104,13 @@ def train_val_test_split(df, labels):
     print('Le train is composed by %d group and %d observation' %
           (train.groupby('group').ngroups, len(train)))
 
-    group_val = ['group' + str(i) for i in range(20, 27)]
+    group_val = ['group' + str(i) for i in range(25, 32)]
     val = df[df.group.isin(group_val)]
     val = val.join(labels[labels.index.isin(val.index)])
     print('Le val is composed by %d group and %d observation' %
           (val.groupby('group').ngroups, len(val)))
 
-    group_test = ['group' + str(i) for i in range(27, 27 + 8)]
+    group_test = ['group' + str(i) for i in range(32, 35)]
     test = df[df.group.isin(group_test)]
     test = test.join(labels[labels.index.isin(test.index)])
     print('Le test is composed by %d group and %d observation' %
