@@ -24,13 +24,22 @@ def get_model_name(path):
     return os.path.join(path, 'model_' + str(model + 1))
 
 
-def check_folder(args, folder):
+def check_folder(config, folder):
     output_exists = os.path.isdir(folder)
-    if output_exists and not args.overwrite:
+    if output_exists and not config['overwrite']:
         print 'Model output exists. Use --overwrite'
         sys.exit(1)
     elif not output_exists:
         os.mkdir(folder)
+
+
+def dump_conf_file(config, fname):
+    conf_file = os.path.join(fname, 'conf_model.json')
+    with open(conf_file, 'w+') as f:
+        json.dump(config, f,
+                  sort_keys=True,
+                  indent=4,
+                  ensure_ascii=False)
 
 
 def parse_conf_file(conf_file):
@@ -41,11 +50,11 @@ def parse_conf_file(conf_file):
     return conf
 
 
-def initialize_checkpoints(args, config, hp):
+def initialize_checkpoints(config, hp):
     # Model checkpoints
     name = '_'.join([f + '_' + str(g) for f, g in hp.iteritems()])
     fname = os.path.join(config['root'], name)
-    check_folder(args, fname)
+    check_folder(config, fname)
 
     model_fname = os.path.join(fname, 'model.pkl')
     model_history_fname = os.path.join(fname, 'model_history.pkl')
@@ -55,5 +64,6 @@ def initialize_checkpoints(args, config, hp):
     save_training_history = SaveTrainingHistory(model_history_fname)
     plot_training_history = PlotTrainingHistory(model_graph_fname)
     early_stopping = EarlyStopping(patience=config['patience'])
+    dump_conf_file(config, fname)
 
     return model_fname, save_weights, save_training_history, plot_training_history, early_stopping

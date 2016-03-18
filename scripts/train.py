@@ -28,28 +28,21 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--conf', required=True, help='Baseline conf file')
 parser.add_argument('--reg', default=1e-7, help='l2 reg parameter')
 parser.add_argument('--lr', default=1e-4, help='learning rate')
-parser.add_argument('--H', default=150, help='Number of units')
+parser.add_argument('--hiddens', default=150, help='Number of units')
 parser.add_argument('--overwrite', action='store_true', default=True)
 parser.add_argument('--continue_training', action='store_true')
 
 # Load the args
-args = parser.parse_args()
-print args
-# Parse the model_conf file (basline)
-config = parse_conf_file(args.conf)
-# load hyperparameters
-hp = {}
-hp['l2_reg'] = args.reg
-hp['learning_rate'] = args.lr
-hp['hidden_units'] = args.H
-
+config = vars(parser.parse_args())
+# Parse the model_conf file (baseline)
+config.update(parse_conf_file(config['conf']))
 
 ################################################################
 # Load the iterator
 # Initialize the batchiterator
 print '\n Loading data iterator using : %s \n' % config['processing']
-nb_features, batch_iterator_train, batch_iterator_val = load_data_training(config[
-    'processing'])
+nb_features, batch_ite_train, batch_ite_val, batch_ite_pred = load_data(
+    name=config['name'], feats=config['feats'], processing=config['processing'])
 
 ################################################################
 # Build the architecture
@@ -57,14 +50,16 @@ print '\n Build the architecture: %s, %s\n' % (config['model'], config['architec
 model = importlib.import_module(
     'model_defs.%s' % config['model'])
 builder = getattr(model, config['architecture'])
-architecture = builder(D=nb_features, H=hp[
-                       'hidden_units'], grad_clip=config['grad_clip'])
+architecture = builder(D=nb_features, H=config[
+                       'hiddens'], grad_clip=config['grad_clip'])
 
 ################################################################
 # Model checkpoints
 print '\n Set up the checkpoints\n '
+# Specifc hyperparameters for the name of the checkpoints
+hp = {'lr': config['lr'], 'rg': config['reg'], 'h': config['hiddens']}
 model_fname, save_weights, save_training_history, plot_training_history, early_stopping = initialize_checkpoints(
-    args, config, hp)
+    config, hp)
 
 ################################################################
 # Initialize solver
@@ -74,11 +69,11 @@ net = NeuralNet(
     regression=True,
     objective_loss_function=getattr(
         lasagne.objectives, config['loss_function']),
-    objective_l2=hp['l2_reg'],  # L2 regularization
+    objective_l2=config['reg'],  # L2 regularization
     update=getattr(lasagne.updates, config['update_rule']),
-    update_learning_rate=hp['learning_rate'],
-    batch_iterator_train=batch_iterator_train,
-    batch_iterator_test=batch_iterator_val,
+    update_learning_rate=config['lr'],
+    batch_iterator_train=batch_ite_train,
+    batch_iterator_test=batch_ite_val,
     on_epoch_finished=[
         save_weights,
         save_training_history,
@@ -92,7 +87,7 @@ net.initialize()
 
 ################################################################
 # Reload the weights if we go from an older mode
-if args.continue_training and os.path.exists(model.model_fname):
+if config['continue_training'] and os.path.exists(model.model_fname):
     print 'Loading model params from %s' % model.model_fname
     net.load_params_from(model.model_fname)
     with open(model.model_history_fname) as f:

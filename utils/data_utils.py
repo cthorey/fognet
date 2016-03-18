@@ -56,7 +56,7 @@ def load_raw_data():
             'macro_guelmim': macro_guelmim,
             'macro_sidi': macro_sidi,
             'macro_aga': macro_aga,
-            'labels': labels,
+            'micro_train_y': labels,
             'submission_format': submission_format}
 
 
@@ -72,9 +72,10 @@ def add_group_column_to_data(df):
     # Get the time difference between obs
     timedelta = [df.index[i + 1] - df.index[i] for i in range(len(df) - 1)]
     # Get the idx where the time difference is larger than only 2H
-    cut = list(
-        np.where(np.array(map(lambda x: x.components.days, timedelta)) != 0)[0])
-    # Put that in a dict with groups
+    cut_day_mask = (np.array(map(lambda x: x.components.days, timedelta)) != 0)
+    cut_hour_mask = (
+        np.array(map(lambda x: x.components.hours, timedelta)) != 2)
+    cut = list(np.where((cut_day_mask) | (cut_hour_mask))[0])
     dict_cut = {cut[k]: 'group' + str(k) for k in range(len(cut))}
 
     def idx_group(idx):
@@ -91,9 +92,10 @@ def add_group_column_to_data(df):
 
 
 def train_val_test_split(df, labels):
-    ''' Return a train/val/test split of the data '''
+    ''' Return a train/val/test split of the data for training '''
 
     df = add_group_column_to_data(df)
+    df['set'] = 'train'
     group_train = ['group' + str(i) for i in range(20)]
     # I remove it as there is only Nan in that group
     group_train.remove('group0')
@@ -117,6 +119,49 @@ def train_val_test_split(df, labels):
     return train, val, test
 
 
+def prediction_split(df_train, df_to_predict, n_obs=24):
+    '''
+    Return the dataframe to make efficient prediction.
+
+    Input:
+    df_train : The dataframe use for training the model
+    df_to_predict: The dataframe for the prediction
+    n_obs : Number of observation to incorporate before
+    and after.
+
+    df_to_predict is cut is slice of 4 days. For each of
+    this slice, we sample the training set n obs before and
+    n obs after and group this observation.
+
+    Therefore, at prediction time, the model can use
+    the information before the predicition and after the
+    prediciton period. This for all the 4days slices !
+
+    '''
+
+    df_train['set'] = 'train'
+    df_test = add_group_column_to_data(df_to_predict)
+    df_test['set'] = 'test'
+    gptest = df_test.groupby('group')
+    df = pd.DataFrame()
+    for name, gp in gptest:
+        # Get the training data before
+        df_before = df_train[:gp.index[0]].iloc[-n_obs:]
+        # Get the training data after
+        df_after = df_train[gp.index[-1]:].iloc[:n_obs]
+        df_tmp = df_before.append(gp).append(df_after).drop('group', axis=1)
+        # Number of groups in the dataframe, should be 1 !
+        nb_groups = len(
+            set(add_group_column_to_data(df_tmp).group))
+        assert nb_groups == 1, 'Error in building the df for gp %s. Try to\
+        change the n_obs parameter. ' % (name)
+        df = df.append(df_tmp)
+    dfprediction = add_group_column_to_data(df)
+    dfprediction['yield'] = 0
+
+    return dfprediction
+
+
 class MyImputer(Imputer):
 
     def df_transform(self, df):
@@ -128,41 +173,60 @@ class MyImputer(Imputer):
 
 class Data(object):
 
-    def __init__(self):
+    def __init__(self, name, feats):
         self.data = load_raw_data()
+        self.train = self.data[name + '_train']
+        self.train_y = self.data[name + '_train_y']
+        self.prediction = self.data[name + '_test']
+        self.inputer = MyImputer(strategy='mean')
+        self.feats = feats
 
-    def benchmark(self):
-        ''' process data for the benchmark '''
+    def benchmark(self, n_obs=24):
+        ''' process data for the benchmark
+
+        n_obs : Number of observation to incorporate before
+        and after for the testing.
+        '''
 
         train, val, test = train_val_test_split(
-            self.data['micro_train'], self.data['labels'])
+            self.train, self.train_y)
+        pred = prediction_split(self.train,
+                                self.prediction,
+                                n_obs)
 
-        # training preprocess
-        # inputer
-        inputer = MyImputer(strategy='mean')
-        inputer.fit(train[train.columns[:-2]])
+        assert set(pred.columns) == set(train.columns)
+        assert set(pred.columns) == set(val.columns)
+        assert set(pred.columns) == set(test.columns)
 
-        train_tmp = inputer.df_transform(
-            train[train.columns[:-2]]).join(train[train.columns[-2:]])
-        val_tmp = inputer.df_transform(
-            train[train.columns[:-2]]).join(train[train.columns[-2:]])
+        # training inputer
+        self.inputer.fit(train[self.feats])
 
-        batch_iterator = BaseBatchIterator(feats=train.columns.tolist()[:-2],
-                                           label='yield',
-                                           batch_size=20,
-                                           size_seq=24,
-                                           stride=1)
+        # Transform the dataframe
+        non_feats = [f for f in train.columns if f not in self.feats]
+        train_tmp = self.inputer.df_transform(
+            train[self.feats]).join(train[non_feats])
+        val_tmp = self.inputer.df_transform(
+            val[self.feats]).join(val[non_feats])
+        pred_tmp = self.inputer.df_transform(
+            pred[self.feats]).join(pred[non_feats])
 
-        batch_iterator_train = batch_iterator(train_tmp)
-        batch_iterator_val = batch_iterator(val_tmp)
+        iter_kwargs = dict(feats=self.feats,
+                           label='yield',
+                           batch_size=20,
+                           size_seq=12,
+                           stride=1)
+        batch_ite_train = BaseBatchIterator(**iter_kwargs)(train_tmp)
+        batch_ite_val = BaseBatchIterator(**iter_kwargs)(val_tmp)
+        batch_ite_pred = BaseBatchIterator(
+            **iter_kwargs)(pred_tmp, predict=True)
 
-        return batch_iterator.nfeats, batch_iterator_train, batch_iterator_val
+        return len(self.feats), batch_ite_train, batch_ite_val, batch_ite_pred
 
 
-def load_data_training(processing='benchmark'):
+def load_data(name='micro', feats=['humidity', 'temp'], processing='benchmark'):
     ''' load the data according to the desire processing
     return batch iterator for train/test split !'''
-    data = Data()
+    data = Data(name=name, feats=feats)
     return getattr(data, processing)()
 
 

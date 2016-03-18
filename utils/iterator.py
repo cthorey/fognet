@@ -9,6 +9,8 @@ class BaseBatchIterator(object):
     '''
     Class to proceed from the dataframe to batch of data to be
     feed in the rnn
+    At prediction time, each batch correspond to the number of
+    sample in the group.
 
     '''
 
@@ -17,7 +19,7 @@ class BaseBatchIterator(object):
         self.feats = feats
         self.nfeats = len(feats)
         # Target
-        self.labels = label
+        self.label = label
         # Size of the sequence you want to enroll in the rnn
         self.seq_size = size_seq
         # Stride for the construction of the sequence.
@@ -29,7 +31,7 @@ class BaseBatchIterator(object):
         self.batch_size = batch_size
         self.verbose = False
 
-    def __call__(self, df):
+    def __call__(self, df, predict=False):
         self.df = df
         self.stack_seqs = self.stack_sequence()
         return self
@@ -66,6 +68,10 @@ class BaseBatchIterator(object):
             # Nb of sequences
             nb_seqs = (nb_obs - self.seq_size) / self.stride + 1
 
+            assert nb_seqs > 1, (
+                'The desired size of the sequence is larger than the number of observation.\n \
+                 Responsible: % s \n\
+                 Number of obs n = %d, size sequence T =%d' % (key, nb_obs, self.seq_size))
             # Begin of the processing
             X = np.zeros((nb_seqs, self.seq_size, self.nfeats))
             y = np.zeros((nb_seqs, self.seq_size))
@@ -74,7 +80,7 @@ class BaseBatchIterator(object):
                 kmin = k * self.stride  # lower bound window
                 kmax = k * self.stride + self.seq_size  # Upper boud window
                 X[k, :, :] = np.array(gp[self.feats].iloc[kmin:kmax])
-                y[k, :] = np.array(gp[self.labels].iloc[kmin:kmax])
+                y[k, :] = np.array(gp[self.label].iloc[kmin:kmax])
                 idx_y[k, :] = map(int, range(kmin, kmax))
             # At the end, X has a shape (N,T,D)
             # y has a shape (N,T)
@@ -84,16 +90,22 @@ class BaseBatchIterator(object):
     def __iter__(self):
         # Iterator
         n_groups = len(self.stack_seqs.keys())  # Nb groups
-        for gp, (X, y, _) in self.stack_seqs.iteritems():
+        for gp, (X, y, p) in self.stack_seqs.iteritems():
             n_samples = X.shape[0]
-            bs = self.batch_size
-            n_batches = (n_samples + bs - 1) // bs
-            idx = range(len(X))
-            for i in range(n_batches):
-                sl = slice(i * bs, (i + 1) * bs)
-                Xb = X[idx[sl]]
-                yb = y[idx[sl]]
-                yield self.transform(Xb, yb)
+            if not self.predict:
+                bs = self.batch_size
+                n_batches = (n_samples + bs - 1) // bs
+                idx = range(len(X))
+                for i in range(n_batches):
+                    sl = slice(i * bs, (i + 1) * bs)
+                    Xb = X[idx[sl]]
+                    yb = y[idx[sl]]
+                    yield self.transform(Xb, yb)
+
+            elif self.predict:
+                yield gp, X, p
+            else:
+                raise ValueError('Wrong value for obj.predict')
 
     @property
     def n_samples(self):

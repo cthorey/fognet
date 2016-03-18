@@ -3,7 +3,7 @@ import sys
 import json
 import sys
 sys.path.append('..')
-from utils.training_utils import get_model_name
+from utils.training_utils import get_model_name, dump_conf_file
 from os.path import expanduser
 home = expanduser("~")
 
@@ -14,6 +14,8 @@ conf = {}
 ####################################
 # Model definition
 # Iterator
+conf['name'] = 'micro'
+conf['feats'] = ['humidity', 'temp']
 conf['processing'] = 'benchmark'
 
 # Architecture
@@ -37,9 +39,4 @@ except:
         'Cannot create the directory for the model %s' % (dir_new_model))
 
 conf['root'] = dir_new_model
-with open(os.path.join(dir_new_model, 'conf_model.json'), 'w+') as f:
-    json.dump(conf,
-              f,
-              sort_keys=True,
-              indent=4,
-              ensure_ascii=False)
+dump_conf_file(conf, dir_new_model)

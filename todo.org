@@ -3,22 +3,46 @@ FOGNET -*- mode: org -*-
 #+TITLE: Fog net competition
 #+AUTHOR: Clement Thorey
 
-* DONE Regorganize the following 
-* TODO Done the file
-* DONE 
-* TODO 
-* DONE 
-  CLOSED: [2016-03-18 Fri 11:14]
+Strategy for the competition fognet [[https://www.drivendata.org/competitions/9/]]
+Leaderboard : https://www.drivendata.org/competitions/9/leaderboard/
 
-* Introduction
-  
-dehzodheiz
+* TODO 
+
+** DONE Tchequer si le model est bien capable de splitter si il ya  des diff de 4H au lieu de 2H !
+   CLOSED: [2016-03-18 Fri 12:00]
+
+** DONE Deal with the inputer stuff. Has to be train of training and use for  testing afterwards.
+   CLOSED: [2016-03-18 Fri 12:54]
+** TODO Incorporer load_data ( name et feats et autre dans le config)
+
+** TODO On s'occupe pas du test set encore ? Pk ??
+
+
 
 * Sequence processing
-  :LOGBOOK:
-  CLOCK: [2016-03-18 Fri 11:12]
-  :END:
 
+Use similar strategy than in the thano tuto LSTM. Use only the last time to predict.
+Sequence with different length
+Use more data (5 min) and use a mask to incorporate only meaningfull result into the loss.
 dheozhdieo [[http://orgmode.org/worg/org-tutorials/orgtutorial_dto.html]]
 
+* Prediciton test test
+
+** TODO Implement batch iterator for testing.
+
+* To thinck about
+
+What to do when the size of the seq is smllaer than window nbseq<0
+
+* Regularization
+
+** TODO Incorporate dropout (https://github.com/JonathanRaiman/theano_lstm) or this paper (http://arxiv.org/abs/1409.2329)
+
+* What to do with missing values
+
+** TODO Fit time  series to each feature to interpolate missing values. Maybe use the 5-min data to do the task !
+
+* Theano tip
+
+https://roshansanthosh.wordpress.com/2015/02/22/linear-regression-in-theano/
 
