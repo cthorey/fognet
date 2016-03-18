@@ -3,6 +3,22 @@ FOGNET -*- mode: org -*-
 #+TITLE: Fog net competition
 #+AUTHOR: Clement Thorey
 
-* TODO Regorganize the following 
+* DONE Regorganize the following 
 * TODO Done the file
-          
+* DONE 
+* TODO 
+* DONE 
+  CLOSED: [2016-03-18 Fri 11:14]
+
+* Introduction
+  
+dehzodheiz
+
+* Sequence processing
+  :LOGBOOK:
+  CLOCK: [2016-03-18 Fri 11:12]
+  :END:
+
+dheozhdieo [[http://orgmode.org/worg/org-tutorials/orgtutorial_dto.html]]
+
+
