@@ -31,18 +31,21 @@ def build_simple_lstm(D=2, H=100, grad_clip=10):
                                      shape=(None, None, D))
     batchsize, seqlen, _ = l_in.input_var.shape
     # lstm layer with tanh non linearity and grad clipper
-    l_lstm = lasagne.layers.LSTMLayer(l_in,
+    l_drop = lasagne.layers.DropoutLayer(l_in, p=0.2)
+    l_lstm = lasagne.layers.LSTMLayer(l_drop,
                                       H,
                                       name='lstm',
+                                      learn_init=True,
                                       grad_clipping=grad_clip,
                                       nonlinearity=lasagne.nonlinearities.tanh)
+    l_drop2 = lasagne.layers.DropoutLayer(l_lstm, p=0.2)
     # reshaping prior to feed to the scoringlayer
-    l_shp = lasagne.layers.ReshapeLayer(l_lstm, (-1, H))
+    l_shp = lasagne.layers.ReshapeLayer(l_drop2, (-1, H))
     # Dense scoring layers
     l_dense = lasagne.layers.DenseLayer(l_shp,
                                         num_units=1,
                                         name='dense',
-                                        nonlinearity=lasagne.nonlinearities.identity)
+                                        nonlinearity=lasagne.nonlinearities.rectify)
     # return (N,T) sequence of predictions.
     l_out = lasagne.layers.ReshapeLayer(l_dense, (batchsize, seqlen))
 

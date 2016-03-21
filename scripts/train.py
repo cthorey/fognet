@@ -19,6 +19,7 @@ import cPickle as pickle
 from utils.data_utils import *
 from utils.nolearn_net import NeuralNet
 from utils.training_utils import *
+from utils.preprocessing import *
 
 ################################################################
 # Parse parameters
@@ -27,7 +28,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--conf', required=True, help='Baseline conf file')
 parser.add_argument('--reg', default=1e-7, help='l2 reg parameter', type=float)
 parser.add_argument('--lr', default=1e-4, help='learning rate', type=float)
-parser.add_argument('--hiddens', default=150, help='Number of units', type=int)
+parser.add_argument('--hiddens', default=50, help='Number of units', type=int)
 parser.add_argument('--overwrite', action='store_true', default=True)
 parser.add_argument('--continue_training', action='store_true')
 
@@ -38,11 +39,19 @@ config.update(parse_conf_file(config['conf']))
 config['time'] = get_current_datetime()
 
 ################################################################
+# Load the preprocessing
+print '\n Loading the prepro pipeline : %s \n' % config['pipe_list']
+pipeline = build_pipeline(config['pipe_list'], config['pipe_kwargs'])
+
+################################################################
 # Load the iterator
 # Initialize the batchiterator
-print '\n Loading data iterator using : %s \n' % config['processing']
-nb_features, batch_ite_train, batch_ite_val, batch_ite_pred = load_data(
-    name=config['name'], feats=config['feats'], processing=config['processing'])
+print '\n Loading data iterator using : %s \n' % config['build_ite']
+nb_features, batch_ite_train, batch_ite_val, batch_ite_test, batch_ite_pred = load_data(
+    name=config['name'],
+    feats=config['feats'],
+    build_ite=config['build_ite'],
+    pipeline=pipeline)
 
 ################################################################
 # Build the architecture

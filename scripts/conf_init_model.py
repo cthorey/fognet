@@ -17,18 +17,20 @@ conf = {}
 conf['name'] = 'micro'
 conf['feats'] = ['percip_mm', 'humidity', 'temp', 'leafwet450_min',
                  'leafwet460_min', 'leafwet_lwscnt', 'gusts_ms', 'wind_dir', 'wind_ms']
-conf['processing'] = 'benchmark'
+conf['build_ite'] = 'benchmark'
+conf['pipe_list'] = ['MyImputer', 'MyStandardScaler']
+conf['pipe_kwargs'] = {'MyImputer__strategy': 'mean'}
 
 # Architecture
 conf['model'] = 'lstm'
 conf['architecture'] = 'build_simple_lstm'
-conf['grad_clip'] = 10
+conf['grad_clip'] = 50
 
 # Solver
 conf['loss_function'] = 'squared_error'
 conf['update_rule'] = 'adam'
 conf['verbose'] = 11
-conf['nb_epochs'] = 80
+conf['nb_epochs'] = 50
 conf['patience'] = 150
 
 dir_new_model = get_model_name(os.path.join(fognet, 'models', conf['model']))

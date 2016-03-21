@@ -66,20 +66,24 @@ class BaseBatchIterator(object):
         stack_seqs = dict.fromkeys(set(self.df.group))
         for key, gp in gps:
             nb_obs = gp.shape[0]  # Nb of obs in the group
-            # Nb of sequences
-            nb_seqs = (nb_obs - self.seq_size) / self.stride + 1
 
-            assert nb_seqs > 1, (
+            seq_size = self.seq_size
+            if nb_obs < seq_size:
+                seq_size = nb_obs
+
+            # Nb of sequences
+            nb_seqs = (nb_obs - seq_size) / self.stride + 1
+            assert nb_seqs > 0, (
                 'The desired size of the sequence is larger than the number of observation.\n \
                  Responsible: % s \n\
-                 Number of obs n = %d, size sequence T =%d' % (key, nb_obs, self.seq_size))
+                 Number of obs n = %d, size sequence T =%d' % (key, nb_obs, seq_size))
             # Begin of the processing
-            X = np.zeros((nb_seqs, self.seq_size, self.nfeats))
-            y = np.zeros((nb_seqs, self.seq_size))
-            idx_y = np.zeros((nb_seqs, self.seq_size))
+            X = np.zeros((nb_seqs, seq_size, self.nfeats))
+            y = np.zeros((nb_seqs, seq_size))
+            idx_y = np.zeros((nb_seqs, seq_size))
             for k in range(nb_seqs):
                 kmin = k * self.stride  # lower bound window
-                kmax = k * self.stride + self.seq_size  # Upper boud window
+                kmax = k * self.stride + seq_size  # Upper boud window
                 X[k, :, :] = np.array(gp[self.feats].iloc[kmin:kmax])
                 y[k, :] = np.array(gp[self.label].iloc[kmin:kmax])
                 idx_y[k, :] = map(int, range(kmin, kmax))

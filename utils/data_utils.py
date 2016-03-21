@@ -1,7 +1,6 @@
 import sys
 sys.path.append('..')
 
-from sklearn.preprocessing import Imputer
 import pandas as pd
 import numpy as np
 from utils.iterator import BaseBatchIterator
@@ -95,8 +94,10 @@ def train_val_test_split(df, labels):
     ''' Return a train/val/test split of the data for training '''
 
     df = add_group_column_to_data(df)
+    n = df.groupby('group').ngroups
+
     df['set'] = 'train'
-    group_train = ['group' + str(i) for i in range(25)]
+    group_train = ['group' + str(i) for i in range(22)]
     # I remove it as there is only Nan in that group
     group_train.remove('group0')
     train = df[df.group.isin(group_train)]
@@ -104,13 +105,13 @@ def train_val_test_split(df, labels):
     print('Le train is composed by %d group and %d observation' %
           (train.groupby('group').ngroups, len(train)))
 
-    group_val = ['group' + str(i) for i in range(25, 32)]
+    group_val = ['group' + str(i) for i in range(22, 30)]
     val = df[df.group.isin(group_val)]
     val = val.join(labels[labels.index.isin(val.index)])
     print('Le val is composed by %d group and %d observation' %
           (val.groupby('group').ngroups, len(val)))
 
-    group_test = ['group' + str(i) for i in range(32, 35)]
+    group_test = ['group' + str(i) for i in range(30, n)]
     test = df[df.group.isin(group_test)]
     test = test.join(labels[labels.index.isin(test.index)])
     print('Le test is composed by %d group and %d observation' %
@@ -165,7 +166,7 @@ def prediction_split(df_train, df_to_predict, n_obs=24):
 def build_dataset(data, name):
     ''' build micro data
     Be carrefull, all the submission date are not contained
-    in the test set. Maybe use interpilation ! 
+    in the test set. Maybe use interpilation !
     '''
 
     data = load_raw_data()
@@ -181,22 +182,13 @@ def build_dataset(data, name):
     return train, train_y, test
 
 
-class MyImputer(Imputer):
-
-    def df_transform(self, df):
-        df_tmp = pd.DataFrame(self.transform(df),
-                              columns=df.columns,
-                              index=df.index)
-        return df_tmp
-
-
 class Data(object):
 
-    def __init__(self, name, feats):
+    def __init__(self, name, feats, pipeline):
         self.data = load_raw_data()
         self.train, self.train_y, self.prediction = build_dataset(
             self.data, name)
-        self.inputer = MyImputer(strategy='mean')
+        self.pipeline = pipeline
         self.feats = feats
 
     def benchmark(self, n_obs=12):
@@ -217,35 +209,44 @@ class Data(object):
         assert set(pred.columns) == set(test.columns)
 
         # training inputer
-        self.inputer.fit(train[self.feats])
+        self.pipeline.fit(train[self.feats])
 
         # Transform the dataframe
         non_feats = [f for f in train.columns if f not in self.feats]
-        train_tmp = self.inputer.df_transform(
+        train_tmp = self.pipeline.df_transform(
             train[self.feats]).join(train[non_feats])
-        val_tmp = self.inputer.df_transform(
+
+        val_tmp = self.pipeline.df_transform(
             val[self.feats]).join(val[non_feats])
-        pred_tmp = self.inputer.df_transform(
+
+        test_tmp = self.pipeline.df_transform(
+            test[self.feats]).join(test[non_feats])
+
+        pred_tmp = self.pipeline.df_transform(
             pred[self.feats]).join(pred[non_feats])
 
         iter_kwargs = dict(feats=self.feats,
                            label='yield',
-                           batch_size=20,
-                           size_seq=12,
+                           batch_size=24,
+                           size_seq=24,
                            stride=1)
         batch_ite_train = BaseBatchIterator(**iter_kwargs)(train_tmp)
         batch_ite_val = BaseBatchIterator(**iter_kwargs)(val_tmp)
+        batch_ite_test = BaseBatchIterator(**iter_kwargs)(test_tmp)
         batch_ite_pred = BaseBatchIterator(
             **iter_kwargs)(pred_tmp, predict=True)
 
-        return len(self.feats), batch_ite_train, batch_ite_val, batch_ite_pred
+        return len(self.feats), batch_ite_train, batch_ite_val, batch_ite_test, batch_ite_pred
 
 
-def load_data(name='micro', feats=['humidity', 'temp'], processing='benchmark'):
+def load_data(name='micro',
+              feats=['humidity', 'temp'],
+              build_ite='benchmark',
+              pipeline='base'):
     ''' load the data according to the desire processing
     return batch iterator for train/test split !'''
-    data = Data(name=name, feats=feats)
-    return getattr(data, processing)()
+    data = Data(name=name, feats=feats, pipeline=pipeline)
+    return getattr(data, build_ite)()
 
 
 if __name__ == '__main__':
