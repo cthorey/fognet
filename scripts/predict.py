@@ -1,3 +1,5 @@
+import sys
+sys.path.append('..')
 import argparse
 import importlib
 from time import strftime
@@ -8,6 +10,7 @@ from utils.training_utils import *
 from utils.data_utils import *
 from utils.nolearn_net import NeuralNet
 from utils.prediction_utils import prediction
+from utils.preprocessing import *
 import json
 import theano
 import theano.tensor as T
@@ -25,6 +28,7 @@ config = vars(parser.parse_args())
 # get the model parameters and store them in a ditct
 config.update(parse_conf_file(config['conf']))
 
+
 ################################################################
 # Output file to store the submission
 output_fname = os.path.join(
@@ -32,10 +36,19 @@ output_fname = os.path.join(
 print 'Will write output to %s' % output_fname
 
 ################################################################
+# Load the preprocessing
+print '\n Loading the prepro pipeline : %s \n' % config['pipe_list']
+pipeline = build_pipeline(config['pipe_list'], config['pipe_kwargs'])
+
+################################################################
 # Load the iterator for prediction
-print '\n Loading data iterator using : %s \n' % config['processing']
-nb_features, _, _, batch_ite_pred = load_data(
-    name=config['name'], feats=config['feats'], processing=config['processing'])
+print '\n Loading data iterator using : %s \n' % config['build_ite']
+nb_features, _, _, _, batch_ite_pred = load_data(
+    name=config['name'],
+    feats=config['feats'],
+    build_ite=config['build_ite'],
+    pipeline=pipeline)
+
 
 ################################################################
 # Build the architecture

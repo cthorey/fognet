@@ -8,6 +8,13 @@ Leaderboard : https://www.drivendata.org/competitions/9/leaderboard/
 
 * TODO 
 
+** TODO Problem after patien, no learn through an error.  
+   Loading  weights from  a  list  of parameter  values  is no  longer
+   supported.  
+   Please   send    me   something   like   the    return   value   of
+   'net.get_all_params_values()' instead.
+   Looking into that
+
 ** TODO Look at the size of the sequences 
 ** TODO [#A] Bien verrifier ce que sort les iterators 
 ** TODO Verrifier que le net se comporte bien a test time dans nolearn_net ? determinitisc o what ?!
