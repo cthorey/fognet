@@ -5,11 +5,24 @@ import sys
 sys.path.append('..')
 from utils.training_utils import get_model_name, dump_conf_file
 from os.path import expanduser
+import platform
+
 home = expanduser("~")
 
 fognet = os.path.join(home, 'Documents', 'project', 'competition', 'fognet')
 
 conf = {}
+
+# Where the model is runed ?
+if platform.uname()[1] == 'pss-16.step.univ-paris-diderot.fr':
+    conf['platform'] = 'bbking'
+    # laptop sur mon bureau
+elif platform.uname()[1] == 'clavius.step.univ-paris-diderot.fr':
+    conf['platform'] = 'clavius'
+else:
+    raise SystemExit('Platform unknown !')
+if not os.path.isdir(os.path.join(fognet, 'models', conf['platform'])):
+    os.mkdir(os.path.join(fognet, 'models', conf['platform']))
 
 ####################################
 # Model definition
@@ -33,7 +46,12 @@ conf['verbose'] = 11
 conf['nb_epochs'] = 1000
 conf['patience'] = 25
 
-dir_new_model = get_model_name(os.path.join(fognet, 'models', conf['model']))
+path_base_model = os.path.join(
+    fognet, 'models', conf['platform'], conf['model'])
+if not os.path.isdir(path_base_model):
+    os.mkdir(path_base_model)
+
+dir_new_model = get_model_name(path_base_model)
 try:
     'Initialize the model tree'
     os.mkdir(dir_new_model)
