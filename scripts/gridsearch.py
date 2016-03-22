@@ -43,5 +43,5 @@ if __name__ == '__main__':
     # grid parameter
     parameters_grid = {'lr': np.logspace(-3, -2, num=2),
                        'reg': [1e-7],
-                       'hiddens': [25]}
+                       'hiddens': [25, 50]}
     grid_search(config, parameters_grid)
