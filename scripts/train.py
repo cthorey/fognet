@@ -51,23 +51,19 @@ def train(config):
     architecture = builder(D=nb_features, H=config[
         'hiddens'], grad_clip=config['grad_clip'])
 
-    if training:
-        ################################################################
-        # Model checkpoints
-        print '\n Set up the checkpoints\n '
-        # Specifc hyperparameters for the name of the checkpoints
-        hp = {'lr': config['lr'], 'rg': config['reg'], 'h': config['hiddens']}
-        model_fname, save_weights, save_training_history, plot_training_history, early_stopping = initialize_checkpoints(
-            config, hp)
-        on_epoch_finished = [
-            save_weights,
-            save_training_history,
-            plot_training_history,
-            early_stopping
-        ]
-
-    elif not training:
-        on_epoch_finished = []
+    ################################################################
+    # Model checkpoints
+    print '\n Set up the checkpoints\n '
+    # Specifc hyperparameters for the name of the checkpoints
+    hp = {'lr': config['lr'], 'rg': config['reg'], 'h': config['hiddens']}
+    model_fname, save_weights, save_training_history, plot_training_history, early_stopping = initialize_checkpoints(
+        config, hp)
+    on_epoch_finished = [
+        save_weights,
+        save_training_history,
+        plot_training_history,
+        early_stopping
+    ]
 
     ################################################################
     # Initialize solver
