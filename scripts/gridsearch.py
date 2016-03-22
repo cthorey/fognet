@@ -1,6 +1,6 @@
 import sys
 sys.path.append('..')
-
+from joblib import Parallel, delayed
 import argparse
 import os
 import sys
@@ -9,24 +9,14 @@ import itertools
 from train import *
 
 
-def grid_search(config, parameters_grid):
-    ''' Run a grid search over the parameters
-
-    config : dictionary to run the lstm
-    parameters_grid: a parameter grid with different value over which
-    you want the model to run.
-    '''
+def conf_generator(config, parameters_grids):
 
     assert all([f in ['lr', 'reg', 'hiddens'] for f in parameters_grid.keys()])
-
     product = [x for x in apply(itertools.product, parameters_grid.values())]
-    runs = [dict(zip(parameters_grid.keys(), p)) for p in product]
-
-    print('%d model are about to be run' % (len(runs)))
-    for i, grid in enumerate(runs):
-        print 'Still %d model to be run' % (len(runs) - i)
-        config.update(grid)
-        train(config)
+    conf_runs = [dict(zip(parameters_grid.keys(), p)) for p in product]
+    for conf_run in conf_runs:
+        config.update(conf_run)
+        yield config
 
 
 if __name__ == '__main__':
@@ -44,4 +34,6 @@ if __name__ == '__main__':
     parameters_grid = {'lr': np.logspace(-3, -2, num=2),
                        'reg': [1e-7],
                        'hiddens': [25, 50]}
-    grid_search(config, parameters_grid)
+    confs = conf_generator(config, parameters_grid)
+    out = Parallel(n_jobs=config['njobs'], verbose=100)(delayed(train)(conf)
+                                                        for conf in confs)
