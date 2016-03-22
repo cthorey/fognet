@@ -8,12 +8,8 @@ Leaderboard : https://www.drivendata.org/competitions/9/leaderboard/
 
 * TODO 
 
-** TODO Problem after patien, no learn through an error.  
-   Loading  weights from  a  list  of parameter  values  is no  longer
-   supported.  
-   Please   send    me   something   like   the    return   value   of
-   'net.get_all_params_values()' instead.
-   Looking into that
+** TODO write a file to each folder to sumup statistic of the model
+** TODO write a file to each folder submission.txt
 
 ** TODO Look at the size of the sequences 
 ** TODO [#A] Bien verrifier ce que sort les iterators 
@@ -23,6 +19,14 @@ Leaderboard : https://www.drivendata.org/competitions/9/leaderboard/
 ** TODO Introduce a RELU non linearty in the net(threshold to zero)
 
 
+
+** DONE Problem after patien, no learn through an error.  
+   CLOSED: [2016-03-22 Tue 13:27]
+   Loading  weights from  a  list  of parameter  values  is no  longer
+   supported.  
+   Please   send    me   something   like   the    return   value   of
+   'net.get_all_params_values()' instead.
+   Looking into that
 
 ** DONE normalize feature
    CLOSED: [2016-03-19 Sat 10:20]

@@ -2,7 +2,6 @@ import sys
 sys.path.append('..')
 import argparse
 import importlib
-from time import strftime
 import numpy as np
 import pandas as pd
 import cPickle as pickle
@@ -86,15 +85,5 @@ print 'Run the prediction'
 final_pred = prediction(net, batch_ite_pred)
 
 ################################################################
-# Merge and produce  the submission file
-submission_df = load_raw_data()['submission_format']
-final_pred_format = submission_df.join(final_pred, how='left')
-submission_df['yield'] = final_pred_format['yield_pred']
-
-################################################################
-# Remove value below zero !
-submission_df[submission_df['yield'] < 0.0] = 0
-
-################################################################
-# Store to a txt file
-submission_df.to_csv(output_fname)
+# Make submissin file
+make_submission(config, final_pred)

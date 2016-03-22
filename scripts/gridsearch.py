@@ -6,18 +6,25 @@ import os
 import sys
 import importlib
 import itertools
-from script.train import *
+from train import *
 
 
-def grid_search(parameters_grid):
-    ''' Run a grid search over the parameters '''
+def grid_search(config, parameters_grid):
+    ''' Run a grid search over the parameters
+
+    config : dictionary to run the lstm
+    parameters_grid: a parameter grid with different value over which
+    you want the model to run.
+    '''
 
     assert all([f in ['lr', 'reg', 'hiddens'] for f in parameters_grid.keys()])
 
-    product = [x for x in apply(itertools.product, parameter_grid.values())]
-    runs = [dict(zip(parameter_grid.keys(), p)) for p in product]
+    product = [x for x in apply(itertools.product, parameters_grid.values())]
+    runs = [dict(zip(parameters_grid.keys(), p)) for p in product]
 
-    for i, grid in runs:
+    print('%d model are about to be run' % (len(runs)))
+    for i, grid in enumerate(runs):
+        print 'Still %d model to be run' % (len(runs) - i)
         config.update(grid)
         train(config)
 
@@ -25,6 +32,8 @@ def grid_search(parameters_grid):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--conf', required=True, help='Baseline conf file')
+    parser.add_argument('--overwrite', action='store_true', default=True)
+    parser.add_argument('--continue_training', action='store_true')
 
     # Load the args
     config = vars(parser.parse_args())
@@ -32,7 +41,7 @@ if __name__ == '__main__':
     config['time'] = get_current_datetime()
 
     # grid parameter
-    parameters_grid = {'lr': np.logspace(-7, -2, num=10),
-                       'reg': np.logspace(-7, -2, num=10),
-                       'hidden': range(25, 500, 50)}
+    parameters_grid = {'lr': np.logspace(-3, -2, num=2),
+                       'reg': [1e-7],
+                       'hiddens': [25]}
     grid_search(config, parameters_grid)

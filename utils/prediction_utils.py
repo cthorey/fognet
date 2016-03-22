@@ -3,6 +3,9 @@ sys.path.append('..')
 import os
 import numpy as np
 import pandas as pd
+from time import strftime
+from utils.training_utils import get_current_datetime
+from utils.data_utils import load_raw_data
 
 
 def prediction(net, batch_iterator_pred):
@@ -23,3 +26,25 @@ def prediction(net, batch_iterator_pred):
     final_pred = pd.DataFrame(
         final_pred.values(), index=final_pred.keys(), columns=['yield_pred'])
     return final_pred
+
+
+def make_submission(config, final_pred):
+    ''' Given a dataframe, make the prediction '''
+
+    output_fname = os.path.join(
+        config['folder'], 'submissions_%s.csv' % get_current_datetime())
+    print 'Will write output to %s' % output_fname
+
+    ################################################################
+    # Merge and produce  the submission file
+    submission_df = load_raw_data()['submission_format']
+    final_pred_format = submission_df.join(final_pred, how='left')
+    submission_df['yield'] = final_pred_format['yield_pred']
+
+    ################################################################
+    # Remove value below zero !
+    submission_df[submission_df['yield'] < 0.0] = 0
+
+    ################################################################
+    # Store to a txt file
+    submission_df.to_csv(output_fname)

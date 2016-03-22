@@ -29,12 +29,12 @@ class EarlyStopping(object):
         if current_valid < self.best_valid:
             self.best_valid = current_valid
             self.best_valid_epoch = current_epoch
-            self.best_weights = [w.get_value() for w in nn.get_all_params()]
+            self.best_weights = nn.get_all_params_values()
         elif self.best_valid_epoch + self.patience <= current_epoch:
             print('Early stopping.')
             print('Best valid loss was {:.6f} at epoch {}.'.format(
                 self.best_valid, self.best_valid_epoch))
-            nn.load_weights_from(self.best_weights)
+            nn.load_params_from(self.best_weights)
             raise StopIteration()
 
 
@@ -103,6 +103,16 @@ class PlotTrainingHistory(object):
 
         plt.savefig(self.path)
         plt.close()
+
+
+def write_final_score(config, net):
+
+    train, val = net.get_score_whole_set(
+        'train'), net.get_score_whole_set('test')
+    f = os.path.join(config['folder'], 'train_%1.3f_val_%1.3f' % (train, val))
+    with open(f, 'wr+') as f:
+        f.write('nice training')
+        f.close()
 
 
 def float32(x):

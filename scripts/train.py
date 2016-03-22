@@ -16,10 +16,12 @@ import lasagne
 import numpy as np
 import matplotlib
 import cPickle as pickle
+from utils.hook import write_final_score
 from utils.data_utils import *
 from utils.nolearn_net import NeuralNet
 from utils.training_utils import *
 from utils.preprocessing import *
+from utils.prediction_utils import prediction, make_submission
 
 
 def train(config):
@@ -49,13 +51,23 @@ def train(config):
     architecture = builder(D=nb_features, H=config[
         'hiddens'], grad_clip=config['grad_clip'])
 
-    ################################################################
-    # Model checkpoints
-    print '\n Set up the checkpoints\n '
-    # Specifc hyperparameters for the name of the checkpoints
-    hp = {'lr': config['lr'], 'rg': config['reg'], 'h': config['hiddens']}
-    model_fname, save_weights, save_training_history, plot_training_history, early_stopping = initialize_checkpoints(
-        config, hp)
+    if training:
+        ################################################################
+        # Model checkpoints
+        print '\n Set up the checkpoints\n '
+        # Specifc hyperparameters for the name of the checkpoints
+        hp = {'lr': config['lr'], 'rg': config['reg'], 'h': config['hiddens']}
+        model_fname, save_weights, save_training_history, plot_training_history, early_stopping = initialize_checkpoints(
+            config, hp)
+        on_epoch_finished = [
+            save_weights,
+            save_training_history,
+            plot_training_history,
+            early_stopping
+        ]
+
+    elif not training:
+        on_epoch_finished = []
 
     ################################################################
     # Initialize solver
@@ -70,12 +82,7 @@ def train(config):
         update_learning_rate=config['lr'],
         batch_iterator_train=batch_ite_train,
         batch_iterator_test=batch_ite_val,
-        on_epoch_finished=[
-            save_weights,
-            save_training_history,
-            plot_training_history,
-            early_stopping
-        ],
+        on_epoch_finished=on_epoch_finished,
         verbose=config['verbose'],
         max_epochs=10000,
     )
@@ -100,6 +107,16 @@ def train(config):
 
     print 'Evaluating on test set'
     print net.get_score_whole_set(split='test')
+
+    ################################################################
+    # Write final score in the folder as a name of txt file
+    write_final_score(config, net)
+
+    ################################################################
+    # Predict the yield for the whole prediction set
+    print 'Run the prediction'
+    final_pred = prediction(net, batch_ite_pred)
+    make_submission(config, final_pred)
 
 if __name__ == '__main__':
     ################################################################
