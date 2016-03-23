@@ -37,7 +37,7 @@ conf['pipe_kwargs'] = {'MyImputer__strategy': 'mean'}
 # Architecture
 conf['model'] = 'lstm'
 conf['architecture'] = 'build_simple_lstm'
-conf['grad_clip'] = 50
+conf['grad_clip'] = 1
 
 # Solver
 conf['loss_function'] = 'squared_error'
@@ -55,6 +55,7 @@ dir_new_model = get_model_name(path_base_model)
 try:
     'Initialize the model tree'
     os.mkdir(dir_new_model)
+    print('Model in: %s' % (dir_new_model))
 except:
     raise ValueError(
         'Cannot create the directory for the model %s' % (dir_new_model))
