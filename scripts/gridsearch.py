@@ -43,9 +43,9 @@ if __name__ == '__main__':
     config['time'] = get_current_datetime()
 
     # grid parameter
-    parameters_grid = {'lr': np.logspace(-3, -2, num=2),
-                       'reg': [1e-7],
-                       'hiddens': [25, 10, 20, 50]}
+    parameters_grid = {'lr': np.logspace(-7, 0, num=25),
+                       'reg': np.logspace(-7, -3, num=25),
+                       'hiddens': range(10, 500, 25)}
     confs = conf_generator(config, parameters_grid)
     print('We are going to run %d different models' % (len(confs)))
     Parallel(n_jobs=cpu_count())(delayed(train)(conf) for conf in confs)
