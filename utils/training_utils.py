@@ -60,7 +60,6 @@ def initialize_checkpoints(config, hp):
     name = '_'.join([f + '_' + str(g) for f, g in hp.iteritems()])
     fname = os.path.join(config['root'], name)
     check_folder(config, fname)
-
     model_fname = os.path.join(fname, 'model.pkl')
     model_history_fname = os.path.join(fname, 'model_history.pkl')
     model_graph_fname = os.path.join(fname, 'model_history.png')

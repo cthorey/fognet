@@ -29,13 +29,13 @@ def train(config):
     a config file '''
     ################################################################
     # Load the preprocessing
-    print '\n Loading the prepro pipeline : %s \n' % config['pipe_list']
+    print 'Loading the prepro pipeline : %s' % config['pipe_list']
     pipeline = build_pipeline(config['pipe_list'], config['pipe_kwargs'])
 
     ################################################################
     # Load the iterator
     # Initialize the batchiterator
-    print '\n Loading data iterator using : %s \n' % config['build_ite']
+    print 'Loading data iterator using : %s' % config['build_ite']
     nb_features, batch_ite_train, batch_ite_val, batch_ite_test, batch_ite_pred = load_data(
         name=config['name'],
         feats=config['feats'],
@@ -44,7 +44,7 @@ def train(config):
 
     ################################################################
     # Build the architecture
-    print '\n Build the architecture: %s, %s\n' % (config['model'], config['architecture'])
+    print 'Build the architecture: %s, %s' % (config['model'], config['architecture'])
     model = importlib.import_module(
         'model_defs.%s' % config['model'])
     builder = getattr(model, config['architecture'])
@@ -53,7 +53,7 @@ def train(config):
 
     ################################################################
     # Model checkpoints
-    print '\n Set up the checkpoints\n '
+    print 'Set up the checkpoints'
     # Specifc hyperparameters for the name of the checkpoints
     hp = {'lr': config['lr'], 'rg': config['reg'], 'h': config['hiddens']}
     model_fname, save_weights, save_training_history, plot_training_history, early_stopping = initialize_checkpoints(
@@ -67,7 +67,7 @@ def train(config):
 
     ################################################################
     # Initialize solver
-    print '\n Initialize the network \n '
+    print 'Initialize the network '
     net = NeuralNet(
         layers=architecture,
         regression=True,

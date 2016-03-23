@@ -1,12 +1,25 @@
 import sys
 sys.path.append('..')
-from joblib import Parallel, delayed
 import argparse
 import os
 import sys
 import importlib
 import itertools
 from train import *
+from multiprocessing import Pool
+from multiprocessing import cpu_count
+from joblib import Parallel, delayed
+
+
+def update_dict(config, new_parameters):
+    ''' return an update dict based on config
+    input:
+    config : baseline dict
+    new_parameters : new parameter dict
+    '''
+    d = dict(config)  # Creat new dict, baseline=config
+    d.update(new_parameters)  # update the new dict with the new parameters
+    return d  # return it ! Trust me , only way to get it done
 
 
 def conf_generator(config, parameters_grids):
@@ -14,9 +27,8 @@ def conf_generator(config, parameters_grids):
     assert all([f in ['lr', 'reg', 'hiddens'] for f in parameters_grid.keys()])
     product = [x for x in apply(itertools.product, parameters_grid.values())]
     conf_runs = [dict(zip(parameters_grid.keys(), p)) for p in product]
-    for conf_run in conf_runs:
-        config.update(conf_run)
-        yield config
+    confs = map(lambda d: update_dict(config, d), conf_runs)
+    return confs
 
 
 if __name__ == '__main__':
@@ -33,7 +45,7 @@ if __name__ == '__main__':
     # grid parameter
     parameters_grid = {'lr': np.logspace(-3, -2, num=2),
                        'reg': [1e-7],
-                       'hiddens': [25, 50]}
+                       'hiddens': [25, 10, 20, 50]}
     confs = conf_generator(config, parameters_grid)
-    out = Parallel(n_jobs=config['njobs'], verbose=100)(delayed(train)(conf)
-                                                        for conf in confs)
+    print('We are going to run %d different models' % (len(confs)))
+    Parallel(n_jobs=cpu_count())(delayed(train)(conf) for conf in confs)

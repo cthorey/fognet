@@ -16,11 +16,9 @@ conf = {}
 # Where the model is runed ?
 if platform.uname()[1] == 'pss-16.step.univ-paris-diderot.fr':
     conf['platform'] = 'bbking'
-    conf['njobs'] = 2
     # laptop sur mon bureau
 elif platform.uname()[1] == 'clavius.step.univ-paris-diderot.fr':
     conf['platform'] = 'clavius'
-    conf['njobs'] = 8
 else:
     raise SystemExit('Platform unknown !')
 if not os.path.isdir(os.path.join(fognet, 'models', conf['platform'])):
