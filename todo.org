@@ -8,9 +8,7 @@ Leaderboard : https://www.drivendata.org/competitions/9/leaderboard/
 
 * TODO 
 
-** TODO write a file to each folder to sumup statistic of the model
-** TODO write a file to each folder submission.txt
-
+** TODO Pass the size of the seq as a parameters !
 ** TODO Look at the size of the sequences 
 ** TODO [#A] Bien verrifier ce que sort les iterators 
 ** TODO Verrifier que le net se comporte bien a test time dans nolearn_net ? determinitisc o what ?!

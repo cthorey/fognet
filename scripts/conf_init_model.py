@@ -3,34 +3,28 @@ import sys
 import json
 import sys
 sys.path.append('..')
-from utils.training_utils import get_model_name, dump_conf_file
+from utils.initialization import *
 from os.path import expanduser
-import platform
 
 home = expanduser("~")
-
 fognet = os.path.join(home, 'Documents', 'project', 'competition', 'fognet')
-
 conf = {}
-
-# Where the model is runed ?
-if platform.uname()[1] == 'pss-16.step.univ-paris-diderot.fr':
-    conf['platform'] = 'bbking'
-    # laptop sur mon bureau
-elif platform.uname()[1] == 'clavius.step.univ-paris-diderot.fr':
-    conf['platform'] = 'clavius'
-else:
-    raise SystemExit('Platform unknown !')
-if not os.path.isdir(os.path.join(fognet, 'models', conf['platform'])):
-    os.mkdir(os.path.join(fognet, 'models', conf['platform']))
 
 ####################################
 # Model definition
+conf['overwrite'] = True
+conf['continue_training'] = False
+
 # Iterator
 conf['name'] = 'micro'
 conf['feats'] = ['percip_mm', 'humidity', 'temp', 'leafwet450_min',
                  'leafwet460_min', 'leafwet_lwscnt', 'gusts_ms', 'wind_dir', 'wind_ms']
 conf['build_ite'] = 'benchmark'
+conf['stride'] = 1
+conf['batch_size'] = 25
+conf['seq_length'] = 25
+
+# pipeline
 conf['pipe_list'] = ['MyImputer', 'MyStandardScaler']
 conf['pipe_kwargs'] = {'MyImputer__strategy': 'mean'}
 
@@ -46,19 +40,11 @@ conf['verbose'] = 11
 conf['nb_epochs'] = 1000
 conf['patience'] = 25
 
-path_base_model = os.path.join(
-    fognet, 'models', conf['platform'], conf['model'])
-if not os.path.isdir(path_base_model):
-    os.mkdir(path_base_model)
+# Hyperparameters
+conf['lr'] = 1e-4
+conf['reg'] = 1e-6
+conf['hiddens'] = 60
 
-dir_new_model = get_model_name(path_base_model)
-try:
-    'Initialize the model tree'
-    os.mkdir(dir_new_model)
-except:
-    raise ValueError(
-        'Cannot create the directory for the model %s' % (dir_new_model))
-
-
-conf['root'] = dir_new_model
-dump_conf_file(conf, dir_new_model)
+# Initialization
+conf['platform'] = get_platform_and_create_folder(fognet)
+initialize_work_tree(fognet, conf)

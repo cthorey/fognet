@@ -1,9 +1,6 @@
-import sys
-sys.path.append('..')
-
 import pandas as pd
 import numpy as np
-from utils.iterator import BaseBatchIterator
+from iterator import BaseBatchIterator
 import os
 from os.path import expanduser
 home = expanduser("~")
@@ -184,12 +181,15 @@ def build_dataset(data, name):
 
 class Data(object):
 
-    def __init__(self, name, feats, pipeline):
+    def __init__(self, name, feats, pipeline, batch_size, seq_length, stride):
         self.data = load_raw_data()
         self.train, self.train_y, self.prediction = build_dataset(
             self.data, name)
         self.pipeline = pipeline
         self.feats = feats
+        self.batch_size = batch_size
+        self.seq_length = seq_length
+        self.stride = stride
 
     def benchmark(self, n_obs=12):
         ''' process data for the benchmark
@@ -227,9 +227,9 @@ class Data(object):
 
         iter_kwargs = dict(feats=self.feats,
                            label='yield',
-                           batch_size=24,
-                           size_seq=24,
-                           stride=1)
+                           batch_size=self.batch_size,
+                           size_seq=self.seq_length,
+                           stride=self.stride)
         batch_ite_train = BaseBatchIterator(**iter_kwargs)(train_tmp)
         batch_ite_val = BaseBatchIterator(**iter_kwargs)(val_tmp)
         batch_ite_test = BaseBatchIterator(**iter_kwargs)(test_tmp)
@@ -242,10 +242,18 @@ class Data(object):
 def load_data(name='micro',
               feats=['humidity', 'temp'],
               build_ite='benchmark',
-              pipeline='base'):
+              pipeline='base',
+              batch_size=25,
+              seq_length=25,
+              stride=1):
     ''' load the data according to the desire processing
     return batch iterator for train/test split !'''
-    data = Data(name=name, feats=feats, pipeline=pipeline)
+    data = Data(name=name,
+                feats=feats,
+                pipeline=pipeline,
+                batch_size=batch_size,
+                seq_length=seq_length,
+                stride=stride)
     return getattr(data, build_ite)()
 
 
