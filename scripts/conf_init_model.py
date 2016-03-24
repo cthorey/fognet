@@ -31,7 +31,7 @@ conf['pipe_kwargs'] = {'MyImputer__strategy': 'mean'}
 # Architecture
 conf['model'] = 'lstm'
 conf['architecture'] = 'build_simple_lstm'
-conf['grad_clip'] = 50
+conf['grad_clip'] = 1
 
 # Solver
 conf['loss_function'] = 'squared_error'
@@ -39,6 +39,7 @@ conf['update_rule'] = 'adam'
 conf['verbose'] = 11
 conf['nb_epochs'] = 1000
 conf['patience'] = 25
+
 
 # Hyperparameters
 conf['lr'] = 1e-4
