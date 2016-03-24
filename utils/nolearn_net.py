@@ -148,31 +148,8 @@ class NeuralNet(BaseNeuralNet):
     def predict(self, Xb):
         return self.apply_batch_func(self.predict_iter_, Xb)
 
-    def predict_whole_set(self, split):
-        probas = []
-        which_batch_iterator = {'test': self.batch_iterator_test,
-                                'train': self.batch_iterator_train}
-        for Xb, yb in which_batch_iterator[split]:
-            probas.append(self.predict(Xb, yb))
-        return np.vstack(probas)
-
     def get_score(self, Xb, yb):
         ''' Different from the loss because of the reg.
         Same if reg =0.0 '''
         score = mean_squared_error if self.regression else accuracy_score
         return np.mean(score(self.predict(Xb), yb))
-
-    def get_score_whole_set(self, split='test'):
-        ''' Return the MSE mean squared error for the whole set '''
-
-        which_batch_iterator = {'test': self.batch_iterator_test,
-                                'train': self.batch_iterator_train}
-        scores = []
-        for Xb, yb in which_batch_iterator[split]:
-            scores.append(self.get_score(Xb, yb))
-        return np.array(scores).mean()
-
-    def get_rmse_set(self, split='test'):
-
-        mse = self.get_score_whole_set(split)
-        return np.sqrt(mse)
