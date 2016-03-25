@@ -9,15 +9,6 @@ from hook import (
 from time import strftime
 
 
-def check_folder(config, folder):
-    output_exists = os.path.isdir(folder)
-    if output_exists and not config['overwrite']:
-        print 'Model output exists. Use --overwrite'
-        sys.exit(1)
-    elif not output_exists:
-        os.mkdir(folder)
-
-
 def initialize_checkpoints(config, hp):
     # Model checkpoints
     name = '_'.join([f + '_' + str(g) for f, g in hp.iteritems()])

@@ -20,7 +20,7 @@ from utils.hook import write_final_score
 from utils.data_utils import *
 from utils.nolearn_net import NeuralNet
 from utils.checkpoints import *
-from utils.helper import *
+from utils.i import *
 from utils.preprocessing import *
 from utils.prediction_utils import prediction, make_submission
 
