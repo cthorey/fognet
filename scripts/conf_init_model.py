@@ -22,23 +22,24 @@ conf['feats'] = ['percip_mm', 'humidity', 'temp', 'leafwet450_min',
 conf['build_ite'] = 'benchmark'
 conf['stride'] = 1
 conf['batch_size'] = 25
-conf['seq_length'] = 25
+conf['seq_length'] = 200
 
 # pipeline
 conf['pipe_list'] = ['MyImputer', 'MyStandardScaler']
 conf['pipe_kwargs'] = {'MyImputer__strategy': 'mean'}
 
 # Architecture
-conf['model'] = 'lstm'
-conf['which_architecture'] = 'build_simple_lstm'
-conf['grad_clip'] = 1
+conf['type_model'] = 'lstm'
+conf['nb_layers'] = 1
+conf['which_architecture'] = 'lstm'
+conf['grad_clip'] = 10
 
 # Solver
 conf['loss_function'] = 'squared_error'
 conf['update_rule'] = 'adam'
 conf['verbose'] = 11
 conf['nb_epochs'] = 1000
-conf['patience'] = 25
+conf['patience'] = 50
 
 
 # Hyperparameters

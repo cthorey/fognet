@@ -26,7 +26,7 @@ def initialize_work_tree(fognet, conf):
     #########################
     ##
     path_base_model = os.path.join(
-        fognet, 'models', conf['platform'], conf['model'])
+        fognet, 'models', conf['platform'], conf['type_model'])
     if not os.path.isdir(path_base_model):
         os.mkdir(path_base_model)
 

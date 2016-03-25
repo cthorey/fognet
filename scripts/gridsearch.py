@@ -8,6 +8,7 @@ import itertools
 from utils.train_utils import *
 from joblib import Parallel, delayed
 from multiprocessing import cpu_count
+from random import shuffle
 
 
 def update_dict(config, new_parameters):
@@ -26,6 +27,7 @@ def conf_generator(config, parameters_grids):
     product = [x for x in apply(itertools.product, parameters_grid.values())]
     conf_runs = [dict(zip(parameters_grid.keys(), p)) for p in product]
     confs = map(lambda d: update_dict(config, d), conf_runs)
+    shuffle(confs)
     return confs
 
 
@@ -50,11 +52,13 @@ if __name__ == '__main__':
     #                    'hiddens': map(int, np.linspace(200, 200, num=2)),
     #                    'seq_length': [12, 24, 36, 48]}
 
-    parameters_grid = {'lr': [1e-3],
-                       'grad_clip': [1, 10, 20],
-                       'reg': [1e-6],
-                       'hiddens': [100],
-                       'seq_length': [200]}
+    parameters_grid = {'lr': [1e-2, 1e-3, 1e-4],
+                       'nb_layers': [1, 2, 3],
+                       'reg': [1e-4, 1e-6, 0.0],
+                       'stride': [1, 2],
+                       'update_rule': ['adam', 'rmsprop', 'adagrad'],
+                       'hiddens': [20, 50, 100, 200],
+                       'seq_length': [200, 300]}
 
     confs = conf_generator(config, parameters_grid)
     print('We are going to run %d different models' % (len(confs)))

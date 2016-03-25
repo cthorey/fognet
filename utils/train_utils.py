@@ -1,6 +1,7 @@
 import lasagne
 import importlib
 from data_utils import *
+import net_builder
 from nolearn_net import NeuralNet
 from helper import *
 from preprocessing import *
@@ -54,10 +55,10 @@ class Model(object):
     def init_architecture(self):
         ################################################################
         # Build the architecture
-        model = importlib.import_module(
-            'model_defs.%s' % self.model)
-        builder = getattr(model, self.which_architecture)
-        self.architecture = builder(D=self.nb_features, H=self.hiddens,
+        builder = getattr(net_builder, self.which_architecture)
+        self.architecture = builder(n=self.nb_layers,
+                                    D=self.nb_features,
+                                    H=self.hiddens,
                                     grad_clip=self.grad_clip)
 
     def init_checkpoints(self):
@@ -93,7 +94,7 @@ class Model(object):
     def init_model(self, mode='train'):
         ''' Main function that build the model given everythin '''
 
-        print 'Build the architecture: %s, %s' % (self.model, self.which_architecture)
+        print 'Build the architecture: %s, %s' % (self.type_model, self.which_architecture)
         self.init_architecture()
 
         if mode == 'train':
