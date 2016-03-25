@@ -1,6 +1,5 @@
 import lasagne
 import importlib
-from hook import write_final_score
 from data_utils import *
 from nolearn_net import NeuralNet
 from checkpoints import *
@@ -139,18 +138,37 @@ class Model(object):
         print 'Loading best param'
         self.net.load_params_from(self.model_fname)
 
-        print 'Evaluating on test set'
-        print self.net.get_score_whole_set(split='test')
+        print 'Evaluating on val set'
+        print self.get_score_set(split='val')
 
         ################################################################
         # Write final score in the folder as a name of txt file
-        write_final_score(config, self.net)
+        self.write_final_score()
 
         ################################################################
         # Predict the yield for the whole prediction set
         print 'Run the prediction'
-        final_pred = prediction(net, batch_ite_pred)
-        make_submission(config, final_pred)
+        final_pred = self.predict_unseen_data()
+        self.make_submission(final_pred)
+
+    def predict_set(self, split='train'):
+        which_batch_iterator = {'val': self.batch_ite_val,
+                                'test': self.batch_ite_test,
+                                'train': self.batch_ite_train}
+        scores = []
+        for Xb, _ in which_batch_iterator[split]:
+            scores.append(self.net.predict(Xb))
+        return np.vstack(scores)
+
+    def get_score_set(self, split='train'):
+        ''' Return the MSE mean squared error for the whole set '''
+        which_batch_iterator = {'val': self.batch_ite_val,
+                                'test': self.batch_ite_test,
+                                'train': self.batch_ite_train}
+        scores = []
+        for Xb, yb in which_batch_iterator[split]:
+            scores.append(self.net.get_score(Xb, yb))
+        return np.sqrt(np.array(scores).mean())
 
     def predict_unseen_data(self):
         ''' Given a net and an iterator,
@@ -158,8 +176,8 @@ class Model(object):
         with the date
         '''
         final_pred = {}
-        df_pred = self.batch_iterator_pred.df
-        for gp, X, p in self.batch_iterator_pred:
+        df_pred = self.batch_ite_pred.df
+        for gp, X, p in self.batch_ite_pred:
             mask = p[0].astype('int')
             ypred = self.net.predict(X)
             ypred_reshape = np.zeros(p[1])
@@ -191,3 +209,13 @@ class Model(object):
         ################################################################
         # Store to a txt file
         submission_df.to_csv(output_fname)
+
+    def write_final_score(self):
+
+        train = self.get_score_set(split='train')
+        val = self.get_score_set(split='val')
+        f = os.path.join(self.folder,
+                         'train_%1.3f_val_%1.3f' % (train, val))
+        with open(f, 'wr+') as f:
+            f.write('nice training')
+            f.close()

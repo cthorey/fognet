@@ -105,15 +105,5 @@ class PlotTrainingHistory(object):
         plt.close()
 
 
-def write_final_score(config, net):
-
-    train, val = net.get_score_whole_set(
-        'train'), net.get_score_whole_set('test')
-    f = os.path.join(config['folder'], 'train_%1.3f_val_%1.3f' % (train, val))
-    with open(f, 'wr+') as f:
-        f.write('nice training')
-        f.close()
-
-
 def float32(x):
     return np.cast['float32'](x)
