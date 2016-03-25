@@ -16,104 +16,7 @@ import lasagne
 import numpy as np
 import matplotlib
 import cPickle as pickle
-from utils.hook import write_final_score
-from utils.data_utils import *
-from utils.nolearn_net import NeuralNet
-from utils.checkpoints import *
-from utils.i import *
-from utils.preprocessing import *
-from utils.prediction_utils import prediction, make_submission
-
-
-def train(config):
-    ''' The function that allow training giving a specific model given
-    a config file '''
-    ################################################################
-    # Load the preprocessing
-    print 'Loading the prepro pipeline : %s' % config['pipe_list']
-    pipeline = build_pipeline(config['pipe_list'], config['pipe_kwargs'])
-
-    ################################################################
-    # Load the iterator
-    # Initialize the batchiterator
-    print 'Loading data iterator using : %s' % config['build_ite']
-    nb_features, batch_ite_train, batch_ite_val, batch_ite_test, batch_ite_pred = load_data(
-        name=config['name'],
-        feats=config['feats'],
-        build_ite=config['build_ite'],
-        pipeline=pipeline)
-
-    ################################################################
-    # Build the architecture
-    print 'Build the architecture: %s, %s' % (config['model'], config['architecture'])
-    model = importlib.import_module(
-        'model_defs.%s' % config['model'])
-    builder = getattr(model, config['architecture'])
-    architecture = builder(D=nb_features, H=config[
-        'hiddens'], grad_clip=config['grad_clip'])
-
-    ################################################################
-    # Model checkpoints
-    print 'Set up the checkpoints'
-    # Specifc hyperparameters for the name of the checkpoints
-    hp = {'lr': config['lr'], 'rg': config['reg'], 'h': config['hiddens']}
-    model_fname, save_weights, save_training_history, plot_training_history, early_stopping = initialize_checkpoints(
-        config, hp)
-    on_epoch_finished = [
-        save_weights,
-        save_training_history,
-        plot_training_history,
-        early_stopping
-    ]
-
-    ################################################################
-    # Initialize solver
-    print 'Initialize the network '
-    net = NeuralNet(
-        layers=architecture,
-        regression=True,
-        objective_loss_function=getattr(
-            lasagne.objectives, config['loss_function']),
-        objective_l2=config['reg'],  # L2 regularization
-        update=getattr(lasagne.updates, config['update_rule']),
-        update_learning_rate=config['lr'],
-        batch_iterator_train=batch_ite_train,
-        batch_iterator_test=batch_ite_val,
-        on_epoch_finished=on_epoch_finished,
-        verbose=config['verbose'],
-        max_epochs=10000,
-    )
-    net.initialize()
-
-    ################################################################
-    # Reload the weights if we go from an older mode
-    if config['continue_training']:
-        print 'Loading model params from %s' % config['model_fname']
-        net.load_params_from(config['model_fname'])
-        with open(config['model_history_fname']) as f:
-            net.train_history_ = pickle.load(f)
-
-    ################################################################
-    # Fitting
-    net.fit(epochs=config['nb_epochs'])
-
-    ################################################################
-    # Final score
-    print 'Loading best param'
-    net.load_params_from(model_fname)
-
-    print 'Evaluating on test set'
-    print net.get_score_whole_set(split='test')
-
-    ################################################################
-    # Write final score in the folder as a name of txt file
-    write_final_score(config, net)
-
-    ################################################################
-    # Predict the yield for the whole prediction set
-    print 'Run the prediction'
-    final_pred = prediction(net, batch_ite_pred)
-    make_submission(config, final_pred)
+from utils.train_utils import Model
 
 if __name__ == '__main__':
     ################################################################
@@ -149,4 +52,5 @@ if __name__ == '__main__':
         config.update(parse_conf_file(config['conf']))
         config['time'] = get_current_datetime()
 
-    train(config)
+    model = Model(config, mode='train')
+    model.train()

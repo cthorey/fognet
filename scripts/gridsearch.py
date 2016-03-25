@@ -5,10 +5,9 @@ import os
 import sys
 import importlib
 import itertools
-from train import *
-from multiprocessing import Pool
-from multiprocessing import cpu_count
+from utils.train_utils import *
 from joblib import Parallel, delayed
+from multiprocessing import cpu_count
 
 
 def update_dict(config, new_parameters):
@@ -24,17 +23,20 @@ def update_dict(config, new_parameters):
 
 def conf_generator(config, parameters_grids):
 
-    assert all([f in ['lr', 'reg', 'hiddens'] for f in parameters_grid.keys()])
     product = [x for x in apply(itertools.product, parameters_grid.values())]
     conf_runs = [dict(zip(parameters_grid.keys(), p)) for p in product]
     confs = map(lambda d: update_dict(config, d), conf_runs)
     return confs
 
 
+def train_model(config, hp):
+    model = Model(config=config, mode='train', hp=hp)
+    model.train()
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--conf', required=True, help='Baseline conf file')
-    parser.add_argument('--overwrite', action='store_true', default=True)
+    parser.add_argument('--overwrite', action='store_true')
     parser.add_argument('--continue_training', action='store_true')
 
     # Load the args
@@ -43,9 +45,18 @@ if __name__ == '__main__':
     config['time'] = get_current_datetime()
 
     # grid parameter
-    parameters_grid = {'lr': np.logspace(-7, 0, num=10),
-                       'reg': np.logspace(-7, -3, num=10),
-                       'hiddens': range(10, 250, 25)}
+    # parameters_grid = {'lr': np.logspace(-7, 0, num=1),
+    #                    'reg': np.logspace(-7, -3, num=1),
+    #                    'hiddens': map(int, np.linspace(200, 200, num=2)),
+    #                    'seq_length': [12, 24, 36, 48]}
+
+    parameters_grid = {'lr': [1e-3],
+                       'grad_clip': [1, 10, 20],
+                       'reg': [1e-6],
+                       'hiddens': [100],
+                       'seq_length': [200]}
+
     confs = conf_generator(config, parameters_grid)
     print('We are going to run %d different models' % (len(confs)))
-    Parallel(n_jobs=cpu_count())(delayed(train)(conf) for conf in confs)
+    Parallel(n_jobs=cpu_count())(delayed(train_model)(
+        conf, parameters_grid.keys()) for conf in confs)

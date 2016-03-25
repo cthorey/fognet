@@ -30,7 +30,7 @@ conf['pipe_kwargs'] = {'MyImputer__strategy': 'mean'}
 
 # Architecture
 conf['model'] = 'lstm'
-conf['architecture'] = 'build_simple_lstm'
+conf['which_architecture'] = 'build_simple_lstm'
 conf['grad_clip'] = 1
 
 # Solver

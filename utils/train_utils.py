@@ -2,22 +2,34 @@ import lasagne
 import importlib
 from data_utils import *
 from nolearn_net import NeuralNet
-from checkpoints import *
 from helper import *
 from preprocessing import *
+from sklearn.metrics import mean_squared_error
+from nolearn.lasagne.handlers import SaveWeights
+from hook import (
+    SaveTrainingHistory,
+    PlotTrainingHistory,
+    EarlyStopping
+)
+import pickle
 
 
 class Model(object):
 
     def __init__(self, config, mode='train', hp=['lr', 'reg', 'hiddens']):
-        self.mode = mode
+        assert mode in ['train', 'inspection']
         self.conf = config
         for key, val in config.iteritems():
             setattr(self, key, val)
+        self.mode = mode
         self.hp = {f: config[f] for f in hp}
+        print(self.hp)
         self.init_data()
+        self.which_batch_iterator = {'val': self.batch_ite_val,
+                                     'test': self.batch_ite_test,
+                                     'train': self.batch_ite_train,
+                                     'pred': self.batch_ite_pred}
         self.on_epoch_finished = []
-        self.init_checkpoints()
         self.init_model(mode=mode)
 
     def init_data(self):
@@ -44,7 +56,7 @@ class Model(object):
         # Build the architecture
         model = importlib.import_module(
             'model_defs.%s' % self.model)
-        builder = getattr(model, self.architecture)
+        builder = getattr(model, self.which_architecture)
         self.architecture = builder(D=self.nb_features, H=self.hiddens,
                                     grad_clip=self.grad_clip)
 
@@ -81,7 +93,7 @@ class Model(object):
     def init_model(self, mode='train'):
         ''' Main function that build the model given everythin '''
 
-        print 'Build the architecture: %s, %s' % (self.model, self.architecture)
+        print 'Build the architecture: %s, %s' % (self.model, self.which_architecture)
         self.init_architecture()
 
         if mode == 'train':
@@ -108,11 +120,18 @@ class Model(object):
         self.net.initialize()
         if mode == 'train':
             unwanted = ['architecture', 'batch_ite_pred', 'batch_ite_test',
-                        'batch_ite_val', 'batch_ite_train', 'conf', 'net', 'on_epoch_finished']
+                        'batch_ite_val', 'batch_ite_train', 'conf', 'net',
+                        'on_epoch_finished', 'which_batch_iterator']
             config = {k: v for k, v in props(
                 self).iteritems() if k not in unwanted}
             self.conf = config
             dump_conf_file(config, self.folder)
+
+        if mode == 'inspection':
+            print 'Loading model params from %s' % self.model_fname
+            self.net.load_params_from(self.model_fname)
+            with open(self.model_history_fname) as f:
+                self.net.train_history_ = pickle.load(f)
 
     def train(self):
         ''' The function that allow training giving a specific model given
@@ -148,46 +167,52 @@ class Model(object):
         ################################################################
         # Predict the yield for the whole prediction set
         print 'Run the prediction'
-        final_pred = self.predict_unseen_data()
+        final_pred = self.predict_yield(split='pred')
         self.make_submission(final_pred)
 
-    def predict_set(self, split='train'):
-        which_batch_iterator = {'val': self.batch_ite_val,
-                                'test': self.batch_ite_test,
-                                'train': self.batch_ite_train}
+    def get_loss_set(self, split='train'):
+        ''' Return the MSE mean squared error for the whole set '''
         scores = []
-        for Xb, _ in which_batch_iterator[split]:
-            scores.append(self.net.predict(Xb))
-        return np.vstack(scores)
+        for Xb, yb in self.which_batch_iterator[split]:
+            scores.append(self.net.get_score(Xb, yb))
+        return np.array(scores).mean()
 
     def get_score_set(self, split='train'):
-        ''' Return the MSE mean squared error for the whole set '''
-        which_batch_iterator = {'val': self.batch_ite_val,
-                                'test': self.batch_ite_test,
-                                'train': self.batch_ite_train}
-        scores = []
-        for Xb, yb in which_batch_iterator[split]:
-            scores.append(self.net.get_score(Xb, yb))
-        return np.sqrt(np.array(scores).mean())
 
-    def predict_unseen_data(self):
-        ''' Given a net and an iterator,
-        return the unique set of yield  prediction along
-        with the date
+        df = self.predict_yield(split)
+        return np.sqrt(mean_squared_error(df['yield'], df['yield_pred']))
+
+    def predict_yield(self, split):
+        ''' The way we construct the data is a convolution.
+        Therefore we have to unconvolver the batch by gp to be
+        abble to reconstruct the original distribution.
+        The net predict several value for each output which we
+        average.
+
+        Example.
+        x = [1,2,3,4,5]
+        y = [1,0,0,1,0]
+        x_transform = [[1,2,3],[2,3,4],[3,4,5]]
+        y_transform = [[1,0,0],[0,0,1],[0,1,0]]
+
+        y_predict = [[0.2,0,0],[0.3,0.1,0.5],[0.4,0.3,0.4]]
+        y_back_convolved = [[0.2,0,0,0,0],[0,0.3,0.1,0.5,0],[0,0,0.4,0.3,04]
+        and next we mean on the first axis to have smth of shape 5 ; )
         '''
-        final_pred = {}
-        df_pred = self.batch_ite_pred.df
-        for gp, X, p in self.batch_ite_pred:
+
+        df_pred = {}
+        df = self.which_batch_iterator[split].df
+        for gp, (X, y, p) in self.which_batch_iterator[split].stack_seqs.iteritems():
             mask = p[0].astype('int')
             ypred = self.net.predict(X)
             ypred_reshape = np.zeros(p[1])
             for k in range(ypred_reshape.shape[0]):
                 ypred_reshape[k, mask[k, :]] = ypred[k, :]
-            final_pred.update(
-                dict(zip(df_pred[df_pred.group == gp].index, np.mean(ypred_reshape, axis=0))))
-        final_pred = pd.DataFrame(
-            final_pred.values(), index=final_pred.keys(), columns=['yield_pred'])
-        return final_pred
+            df_pred.update(
+                dict(zip(df[df.group == gp].index, np.mean(ypred_reshape, axis=0))))
+        df_pred = pd.DataFrame(
+            df_pred.values(), index=df_pred.keys(), columns=['yield_pred'])
+        return df.join(df_pred)
 
     def make_submission(self, df):
         ''' Given a dataframe, make the prediction '''
@@ -199,7 +224,7 @@ class Model(object):
         ################################################################
         # Merge and produce  the submission file
         submission_df = load_raw_data()['submission_format']
-        final_pred_format = submission_df.join(df, how='left')
+        final_pred_format = submission_df.join(df, how='left', rsuffix='r')
         submission_df['yield'] = final_pred_format['yield_pred']
 
         ################################################################

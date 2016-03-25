@@ -31,10 +31,9 @@ class BaseBatchIterator(object):
         self.batch_size = batch_size
         self.verbose = False
 
-    def __call__(self, df, predict=False):
+    def __call__(self, df):
         self.df = df
         self.stack_seqs = self.stack_sequence()
-        self.predict = predict
         return self
 
     def stack_sequence(self):
@@ -97,20 +96,14 @@ class BaseBatchIterator(object):
         n_groups = len(self.stack_seqs.keys())  # Nb groups
         for gp, (X, y, p) in self.stack_seqs.iteritems():
             n_samples = X.shape[0]
-            if not self.predict:
-                bs = self.batch_size
-                n_batches = (n_samples + bs - 1) // bs
-                idx = range(len(X))
-                for i in range(n_batches):
-                    sl = slice(i * bs, (i + 1) * bs)
-                    Xb = X[idx[sl]]
-                    yb = y[idx[sl]]
-                    yield self.transform(Xb, yb)
-
-            elif self.predict:
-                yield gp, X, p
-            else:
-                raise ValueError('Wrong value for obj.predict')
+            bs = self.batch_size
+            n_batches = (n_samples + bs - 1) // bs
+            idx = range(len(X))
+            for i in range(n_batches):
+                sl = slice(i * bs, (i + 1) * bs)
+                Xb = X[idx[sl]]
+                yb = y[idx[sl]]
+                yield self.transform(Xb, yb)
 
     @property
     def n_samples(self):

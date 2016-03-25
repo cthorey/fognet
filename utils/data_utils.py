@@ -233,8 +233,7 @@ class Data(object):
         batch_ite_train = BaseBatchIterator(**iter_kwargs)(train_tmp)
         batch_ite_val = BaseBatchIterator(**iter_kwargs)(val_tmp)
         batch_ite_test = BaseBatchIterator(**iter_kwargs)(test_tmp)
-        batch_ite_pred = BaseBatchIterator(
-            **iter_kwargs)(pred_tmp, predict=True)
+        batch_ite_pred = BaseBatchIterator(**iter_kwargs)(pred_tmp)
 
         return len(self.feats), batch_ite_train, batch_ite_val, batch_ite_test, batch_ite_pred
 
