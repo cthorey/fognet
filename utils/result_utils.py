@@ -14,14 +14,17 @@ def get_score_model(path_model):
     return map(float, [train, val])
 
 
-def get_result(root, hp=['lr', 'reg', 'seq_length']):
+def get_result(root, hp=['h', 'reg', 'seq_length']):
     models = [f for f in os.listdir(root) if f != 'conf_model.json']
     results = []
     for model in tqdm(models, ncols=len(models)):
         path_model = os.path.join(root, model)
-        conf = parse_conf_file(os.path.join(path_model, 'conf_model.json'))
-        results.append([root, model] + [conf[key]
-                                        for key in hp] + get_score_model(path_model))
+        try:
+            conf = parse_conf_file(os.path.join(path_model, 'conf_model.json'))
+            results.append([root, model] + [conf[key]
+                                            for key in hp] + get_score_model(path_model))
+        except:
+            pass
 
     results = pd.DataFrame(
         results, columns=['root', 'model'] + hp + ['train', 'val'])

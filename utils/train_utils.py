@@ -1,6 +1,7 @@
 import lasagne
 import importlib
 from data_utils import *
+import net_builder
 from nolearn_net import NeuralNet
 from helper import *
 from preprocessing import *
@@ -16,7 +17,16 @@ import pickle
 
 class Model(object):
 
-    def __init__(self, config, mode='train', hp=['lr', 'reg', 'hiddens']):
+    def __init__(self, config, mode='train', hp=['lr', 'reg', 'hiddens'], on_platform='thorey'):
+        '''
+        parameters:
+        config : json file where the model config is stored
+        mode : mode for the initialization, either train or inspection
+        hp : set of hyperparameters that varies, help define the name of
+        the folder where the model will be put
+        on_platform : Name of the platform where the thing is done.
+        '''
+
         assert mode in ['train', 'inspection']
         self.conf = config
         for key, val in config.iteritems():
@@ -54,10 +64,10 @@ class Model(object):
     def init_architecture(self):
         ################################################################
         # Build the architecture
-        model = importlib.import_module(
-            'model_defs.%s' % self.model)
-        builder = getattr(model, self.which_architecture)
-        self.architecture = builder(D=self.nb_features, H=self.hiddens,
+        builder = getattr(net_builder, self.which_architecture)
+        self.architecture = builder(n=self.nb_layers,
+                                    D=self.nb_features,
+                                    H=self.hiddens,
                                     grad_clip=self.grad_clip)
 
     def init_checkpoints(self):
@@ -65,7 +75,7 @@ class Model(object):
         name = '_'.join([f + '_' + str(g) for f, g in self.hp.iteritems()])
         self.model_name = name
         self.folder = os.path.join(self.root, name)
-        output_exists = os.path.isdir(self.folder)
+        output_exists = os.path.isdir(os.path.expanduser(self.folder))
         if output_exists and not self.overwrite:
             print 'Model output exists. Use --overwrite'
             sys.exit(1)
@@ -78,9 +88,11 @@ class Model(object):
         self.model_graph_fname = os.path.join(self.folder, 'model_history.png')
 
         save_weights = SaveWeights(
-            self.model_fname, only_best=True, pickle=False)
-        save_training_history = SaveTrainingHistory(self.model_history_fname)
-        plot_training_history = PlotTrainingHistory(self.model_graph_fname)
+            os.path.expanduser(self.model_fname), only_best=True, pickle=False)
+        save_training_history = SaveTrainingHistory(
+            os.path.expanduser(self.model_history_fname))
+        plot_training_history = PlotTrainingHistory(
+            os.path.expanduser(self.model_graph_fname))
         early_stopping = EarlyStopping(patience=self.patience)
 
         self.on_epoch_finished = [
@@ -93,7 +105,7 @@ class Model(object):
     def init_model(self, mode='train'):
         ''' Main function that build the model given everythin '''
 
-        print 'Build the architecture: %s, %s' % (self.model, self.which_architecture)
+        print 'Build the architecture: %s, %s' % (self.type_model, self.which_architecture)
         self.init_architecture()
 
         if mode == 'train':
@@ -129,8 +141,8 @@ class Model(object):
 
         if mode == 'inspection':
             print 'Loading model params from %s' % self.model_fname
-            self.net.load_params_from(self.model_fname)
-            with open(self.model_history_fname) as f:
+            self.net.load_params_from(os.path.expanduser(self.model_fname))
+            with open(os.path.expanduser(self.model_history_fname)) as f:
                 self.net.train_history_ = pickle.load(f)
 
     def train(self):
@@ -144,8 +156,8 @@ class Model(object):
         # Reload the weights if we go from an older mode
         if self.continue_training:
             print 'Loading model params from %s' % self.model_fname
-            self.net.load_params_from(self.model_fname)
-            with open(self.model_history_fname) as f:
+            self.net.load_params_from(os.path.expanduser(self.model_fname))
+            with open(os.path.expanduser(self.model_history_fname)) as f:
                 net.train_history_ = pickle.load(f)
 
         ###########################################################
@@ -155,7 +167,7 @@ class Model(object):
         ###############################################################
         # Final score
         print 'Loading best param'
-        self.net.load_params_from(self.model_fname)
+        self.net.load_params_from(os.path.expanduser(self.model_fname))
 
         print 'Evaluating on val set'
         print self.get_score_set(split='val')
@@ -233,7 +245,7 @@ class Model(object):
 
         ################################################################
         # Store to a txt file
-        submission_df.to_csv(output_fname)
+        submission_df.to_csv(os.path.expanduser(output_fname))
 
     def write_final_score(self):
 
@@ -241,6 +253,6 @@ class Model(object):
         val = self.get_score_set(split='val')
         f = os.path.join(self.folder,
                          'train_%1.3f_val_%1.3f' % (train, val))
-        with open(f, 'wr+') as f:
+        with open(os.path.expanduser(f), 'wr+') as f:
             f.write('nice training')
             f.close()

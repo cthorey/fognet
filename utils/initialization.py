@@ -16,8 +16,10 @@ def get_platform_and_create_folder(fognet):
         name_platform = 'ray'
     else:
         raise SystemExit('Platform unknown !')
-    if not os.path.isdir(os.path.join(fognet, 'models', name_platform)):
-        os.mkdir(os.path.join(fognet, 'models', name_platform))
+    path_models = os.path.expanduser(
+        os.path.join(fognet, 'models', name_platform))
+    if not os.path.isdir(path_models):
+        os.mkdir(path_model)
 
     return name_platform
 
@@ -26,21 +28,23 @@ def initialize_work_tree(fognet, conf):
     #########################
     ##
     path_base_model = os.path.join(
-        fognet, 'models', conf['platform'], conf['model'])
-    if not os.path.isdir(path_base_model):
-        os.mkdir(path_base_model)
+        fognet, 'models', conf['platform'], conf['type_model'])
+    print os.path.expanduser(path_base_model)
+    if not os.path.isdir(os.path.expanduser(path_base_model)):
+        os.mkdir(os.path.expanduser(path_base_model))
 
-    dir_new_model = get_model_name(path_base_model)
+    dir_new_model = get_model_name(os.path.expanduser(path_base_model))
+    path_dir_new_model = os.path.join(path_base_model, dir_new_model)
     try:
         'Initialize the model tree'
-        os.mkdir(dir_new_model)
+        os.mkdir(os.path.expanduser(path_dir_new_model))
     except:
         raise ValueError(
-            'Cannot create the directory for the model %s' % (dir_new_model))
+            'Cannot create the directory for the model %s' % (os.path.expanduser(path_dir_new_model)))
 
-    conf['root'] = dir_new_model
-    dump_conf_file(conf, dir_new_model)
-    print('Conf file put in %s' % (dir_new_model))
+    conf['root'] = path_dir_new_model
+    dump_conf_file(conf, os.path.expanduser(path_dir_new_model))
+    print('Conf file put in %s' % (os.path.expanduser(path_dir_new_model)))
 
 
 def get_model_name(path):
@@ -54,4 +58,4 @@ def get_model_name(path):
         model = -1
     else:
         model = max([int(f.split('_')[1]) for f in existing_models])
-    return os.path.join(path, 'model_' + str(model + 1))
+    return 'model_' + str(model + 1)

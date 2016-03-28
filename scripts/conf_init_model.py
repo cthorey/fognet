@@ -4,10 +4,8 @@ import json
 import sys
 sys.path.append('..')
 from utils.initialization import *
-from os.path import expanduser
 
-home = expanduser("~")
-fognet = os.path.join(home, 'Documents', 'project', 'competition', 'fognet')
+fognet = os.path.join('~', 'Documents', 'project', 'competition', 'fognet')
 conf = {}
 
 ####################################
@@ -29,7 +27,7 @@ conf['pipe_list'] = ['MyImputer', 'MyStandardScaler']
 conf['pipe_kwargs'] = {'MyImputer__strategy': 'mean'}
 
 # Architecture
-conf['model'] = 'lstm'
+conf['type_model'] = 'lstm'
 conf['which_architecture'] = 'build_simple_lstm'
 conf['grad_clip'] = 1
 

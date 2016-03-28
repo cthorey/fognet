@@ -44,7 +44,7 @@ if __name__ == '__main__':
             print('You want to relaod a model which does not exist')
             raise ValueError()
         print 'Loading model from %s' % config['model_fname']
-    elif config['continue_training'] and not os.path.exists(config['conf']):
+    elif config['continue_training'] and not os.path.exists(os.path.expanduser(config['conf'])):
         print('You want to relaod a model which does not exist')
         raise ValueError()
     elif not config['continue_training']:
