@@ -80,7 +80,7 @@ class Model(object):
             print 'Model output exists. Use --overwrite'
             sys.exit(1)
         elif not output_exists:
-            os.mkdir(self.folder)
+            os.mkdir(os.path.expanduser(self.folder))
 
         self.model_fname = os.path.join(self.folder, 'model.pkl')
         self.model_history_fname = os.path.join(
@@ -137,7 +137,7 @@ class Model(object):
             config = {k: v for k, v in props(
                 self).iteritems() if k not in unwanted}
             self.conf = config
-            dump_conf_file(config, self.folder)
+            dump_conf_file(config, os.path.expanduser(self.folder))
 
         if mode == 'inspection':
             print 'Loading model params from %s' % self.model_fname

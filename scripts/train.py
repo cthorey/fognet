@@ -16,7 +16,7 @@ import lasagne
 import numpy as np
 import matplotlib
 import cPickle as pickle
-from utils.train_utils import Model
+from utils.train_utils import *
 
 if __name__ == '__main__':
     ################################################################
