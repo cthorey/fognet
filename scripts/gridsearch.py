@@ -46,19 +46,13 @@ if __name__ == '__main__':
     config.update(parse_conf_file(config['conf']))
     config['time'] = get_current_datetime()
 
-    # grid parameter
-    # parameters_grid = {'lr': np.logspace(-7, 0, num=1),
-    #                    'reg': np.logspace(-7, -3, num=1),
-    #                    'hiddens': map(int, np.linspace(200, 200, num=2)),
-    #                    'seq_length': [12, 24, 36, 48]}
-
     parameters_grid = {'lr': [1e-2, 1e-3, 1e-4],
                        'nb_layers': [1, 2, 3],
                        'reg': [1e-4, 1e-6, 0.0],
                        'stride': [1, 2],
                        'update_rule': ['adam', 'rmsprop'],
                        'hiddens': [20, 50, 100, 200],
-                       'seq_length': [200, 300]}
+                       'seq_length': [100, 200, 300]}
 
     confs = conf_generator(config, parameters_grid)
     print('We are going to run %d different models' % (len(confs)))

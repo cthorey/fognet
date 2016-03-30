@@ -3,7 +3,7 @@ import sys
 import json
 import sys
 sys.path.append('../')
-from utils.Version_1.initialization import *
+from utils.initialization import *
 
 fognet = os.path.join('~', 'Documents', 'project', 'competition', 'fognet')
 conf = {}
