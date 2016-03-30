@@ -19,7 +19,7 @@ def get_platform_and_create_folder(fognet):
     path_models = os.path.expanduser(
         os.path.join(fognet, 'models', name_platform))
     if not os.path.isdir(path_models):
-        os.mkdir(path_model)
+        os.mkdir(path_models)
 
     return name_platform
 
