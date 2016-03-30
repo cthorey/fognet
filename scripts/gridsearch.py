@@ -56,11 +56,11 @@ if __name__ == '__main__':
                        'nb_layers': [1, 2, 3],
                        'reg': [1e-4, 1e-6, 0.0],
                        'stride': [1, 2],
-                       'update_rule': ['adam', 'rmsprop', 'adagrad'],
+                       'update_rule': ['adam', 'rmsprop'],
                        'hiddens': [20, 50, 100, 200],
                        'seq_length': [200, 300]}
 
     confs = conf_generator(config, parameters_grid)
     print('We are going to run %d different models' % (len(confs)))
-    Parallel(n_jobs=cpu_count())(delayed(train_model)(
+    Parallel(n_jobs=cpu_count() // 3)(delayed(train_model)(
         conf, parameters_grid.keys()) for conf in confs)

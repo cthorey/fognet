@@ -2,8 +2,8 @@ import os
 import sys
 import json
 import sys
-sys.path.append('..')
-from utils.initialization import *
+sys.path.append('../')
+from utils.Version_1.initialization import *
 
 fognet = os.path.join('~', 'Documents', 'project', 'competition', 'fognet')
 conf = {}
@@ -20,11 +20,13 @@ conf['feats'] = ['percip_mm', 'humidity', 'temp', 'leafwet450_min',
 conf['build_ite'] = 'benchmark'
 conf['stride'] = 1
 conf['batch_size'] = 25
-conf['seq_length'] = 25
+conf['seq_length'] = 200
 
 # pipeline
-conf['pipe_list'] = ['MyImputer', 'MyStandardScaler']
-conf['pipe_kwargs'] = {'MyImputer__strategy': 'mean'}
+conf['pipe_list'] = ['MissingValueInputer',
+                     'FillRemainingNaN', 'MyStandardScaler']
+conf['pipe_kwargs'] = {'MissingValueInputer__method': 'time',
+                       'FillRemainingNaN__method': 'bfill'}
 
 # Architecture
 conf['type_model'] = 'lstm'
@@ -33,7 +35,7 @@ conf['which_architecture'] = 'lstm'
 conf['grad_clip'] = 1
 
 # Solver
-conf['loss_function'] = 'squared_error'
+conf['obj_loss_function'] = 'partial_squared_error'
 conf['update_rule'] = 'adam'
 conf['verbose'] = 11
 conf['nb_epochs'] = 1000

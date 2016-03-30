@@ -56,24 +56,6 @@ def load_raw_data():
             'submission_format': submission_format}
 
 
-def get_three_period(df):
-    ''' Get a dataframe, and return the same DF with an extra
-    columns group which reference different group (3 groups).
-    '''
-    df['group'] = 'null'
-    df.loc[:'2014-11', 'group'] = 'group0'
-    df.loc['2014-12':'2015-07', 'group'] = 'group1'
-    df.loc['2015-08':, 'group'] = 'group2'
-    assert 'null' not in set(df.group)
-
-    gp_tmp = []
-    for name, gp in df.groupby('group'):
-        gp_tmp.append(pd.DataFrame(index=pd.date_range(
-            start=gp.index.min(), end=gp.index.max(), freq='2H')).join(gp, how='left'))
-
-    return reduce(lambda a, b: a.append(b), gp_tmp)
-
-
 def add_group_column_to_data(df):
     ''' Get a dataframe, and return the same DF with an extra
     columns group which reference different group.
@@ -83,10 +65,11 @@ def add_group_column_to_data(df):
     More clearly, each group contains a sequence of obs separated by only
     2 hours'''
 
+    df = df.sort_index()
     # Get the time difference between obs
     timedelta = [df.index[i + 1] - df.index[i] for i in range(len(df) - 1)]
-    # Get the idx where the time difference is larger than only 2H
-    cut_day_mask = (np.array(map(lambda x: x.components.days, timedelta)) != 0)
+    # Get the idx where the hour difference is larger than 16 days !
+    cut_day_mask = (np.array(map(lambda x: x.components.days, timedelta)) > 16)
     cut_hour_mask = (
         np.array(map(lambda x: x.components.hours, timedelta)) != 2)
     cut = list(np.where((cut_day_mask) | (cut_hour_mask))[0])
@@ -102,40 +85,43 @@ def add_group_column_to_data(df):
             return 'group' + str(len(cut))
 
     df['group'] = map(idx_group, range(len(df)))
-    return df
+    # Then remove group to small to be use
+    dfgp = df.groupby('group')
+    good_group = []
+    for gp in set(df.group):
+        if len(dfgp.get_group(gp)) > 15:
+            good_group.append(gp)
+    return df[df.group.isin(good_group)]
 
 
-def train_val_test_split(df, labels):
+def train_val_test_split(df):
     ''' Return a train/val/test split of the data for training '''
 
     df = add_group_column_to_data(df)
     n = df.groupby('group').ngroups
 
-    df['set'] = 'train'
-    group_train = ['group' + str(i) for i in range(22)]
-    # I remove it as there is only Nan in that group
-    group_train.remove('group0')
-    train = df[df.group.isin(group_train)]
-    train = train.join(labels[labels.index.isin(train.index)])
+    train = []
+    val = []
+    test = []
+    for name, gp in df.groupby('group'):
+        train.append(gp.iloc[:int(len(gp) * 0.6)])
+        val.append(gp.iloc[int(len(gp) * 0.6):int(len(gp) * 0.9)])
+        test.append(gp.iloc[int(len(gp) * 0.9):])
+
+    train = reduce(lambda a, b: a.append(b), train)
+    val = reduce(lambda a, b: a.append(b), val)
+    test = reduce(lambda a, b: a.append(b), test)
     print('Le train is composed by %d group and %d observation' %
           (train.groupby('group').ngroups, len(train)))
-
-    group_val = ['group' + str(i) for i in range(22, 30)]
-    val = df[df.group.isin(group_val)]
-    val = val.join(labels[labels.index.isin(val.index)])
     print('Le val is composed by %d group and %d observation' %
           (val.groupby('group').ngroups, len(val)))
-
-    group_test = ['group' + str(i) for i in range(30, n)]
-    test = df[df.group.isin(group_test)]
-    test = test.join(labels[labels.index.isin(test.index)])
     print('Le test is composed by %d group and %d observation' %
           (test.groupby('group').ngroups, len(test)))
 
     return train, val, test
 
 
-def build_dataset(data, name):
+def build_dataset(name):
     ''' build micro data
     Be carrefull, all the submission date are not contained
     in the test set. Maybe use interpilation !
@@ -144,22 +130,26 @@ def build_dataset(data, name):
     data = load_raw_data()
     if name == 'micro':
         train = data['microclimat_train']
-        train_y = data['labels']
-        sub_format = data['submission_format']
-        test = sub_format.join(data['microclimat_test'], how='left')
-        test = test[data['microclimat_test'].columns]
-
+        train['type'] = 'training'
+        labels = data['labels']
+        test = data['microclimat_test']
+        sub = data['submission_format']
+        sub['type'] = 'prediction'
+        sub = sub.drop('yield', axis=1)
+        df = train.append(sub.join(test, how='left'))
+        df = df.join(labels, how='left')
+        df['yield'] = df['yield'].fillna(-1)
+        df = df.sort_index()
     else:
         raise ValueError('The data format %s is not impemented yet' % (name))
-    return train, train_y, test
+    return df
 
 
 class Data(object):
 
     def __init__(self, name, feats, pipeline, batch_size, seq_length, stride):
         self.data = load_raw_data()
-        self.train, self.train_y, self.prediction = build_dataset(
-            self.data, name)
+        self.df = build_dataset(name)
         self.pipeline = pipeline
         self.feats = feats
         self.batch_size = batch_size
@@ -173,15 +163,7 @@ class Data(object):
         and after for the testing.
         '''
 
-        train, val, test = train_val_test_split(
-            self.train, self.train_y)
-        pred = prediction_split(self.train,
-                                self.prediction,
-                                n_obs)
-
-        assert set(pred.columns) == set(train.columns)
-        assert set(pred.columns) == set(val.columns)
-        assert set(pred.columns) == set(test.columns)
+        train, val, test = train_val_test_split(self.df)
 
         # training inputer
         self.pipeline.fit(train[self.feats])
@@ -197,9 +179,6 @@ class Data(object):
         test_tmp = self.pipeline.df_transform(
             test[self.feats]).join(test[non_feats])
 
-        pred_tmp = self.pipeline.df_transform(
-            pred[self.feats]).join(pred[non_feats])
-
         iter_kwargs = dict(feats=self.feats,
                            label='yield',
                            batch_size=self.batch_size,
@@ -208,9 +187,8 @@ class Data(object):
         batch_ite_train = BaseBatchIterator(**iter_kwargs)(train_tmp)
         batch_ite_val = BaseBatchIterator(**iter_kwargs)(val_tmp)
         batch_ite_test = BaseBatchIterator(**iter_kwargs)(test_tmp)
-        batch_ite_pred = BaseBatchIterator(**iter_kwargs)(pred_tmp)
 
-        return len(self.feats), batch_ite_train, batch_ite_val, batch_ite_test, batch_ite_pred
+        return len(self.feats), batch_ite_train, batch_ite_val, batch_ite_test
 
 
 def load_data(name='micro',

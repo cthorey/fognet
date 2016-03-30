@@ -1,13 +1,47 @@
 from sklearn.preprocessing import Imputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
+from sklearn.base import TransformerMixin
 import pandas as pd
 
 # Possible processing object
 
 
-class MyImputer(Imputer):
-    pass
+class BaseTransformerMixin(TransformerMixin):
+
+    def get_params(self, deep=True):
+        return self.__dict__
+
+    def set_params(self, **params):
+        for key, val in params.iteritems():
+            setattr(self, key, val)
+
+
+class MissingValueInputer(BaseTransformerMixin):
+
+    def __init__(self, method='time'):
+        self.method = method
+
+    def transform(self, X):
+        return X.interpolate(method=self.method)
+
+    def fit(self, X, y=None):
+        return self
+
+
+class FillRemainingNaN(BaseTransformerMixin):
+
+    def __init__(self, method='bfill'):
+        self.method = method
+
+    def transform(self, X):
+        Xnew = X.fillna(method=self.method)
+        # make sur there is no more NaN in there !
+        assert len(Xnew.dropna()) == len(Xnew)
+        return Xnew
+
+    def fit(self, X, y=None):
+        return self
 
 
 class MyStandardScaler(StandardScaler):

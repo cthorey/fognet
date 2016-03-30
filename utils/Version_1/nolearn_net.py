@@ -147,9 +147,3 @@ class NeuralNet(BaseNeuralNet):
 
     def predict(self, Xb):
         return self.apply_batch_func(self.predict_iter_, Xb)
-
-    def get_score(self, Xb, yb):
-        ''' Different from the loss because of the reg.
-        Same if reg =0.0 '''
-        score = mean_squared_error if self.regression else accuracy_score
-        return np.mean(score(self.predict(Xb), yb))

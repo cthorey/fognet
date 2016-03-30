@@ -5,6 +5,7 @@ import net_builder
 from nolearn_net import NeuralNet
 from helper import *
 from preprocessing import *
+import objectives_utils
 from sklearn.metrics import mean_squared_error
 from nolearn.lasagne.handlers import SaveWeights
 from hook import (
@@ -37,8 +38,7 @@ class Model(object):
         self.init_data()
         self.which_batch_iterator = {'val': self.batch_ite_val,
                                      'test': self.batch_ite_test,
-                                     'train': self.batch_ite_train,
-                                     'pred': self.batch_ite_pred}
+                                     'train': self.batch_ite_train}
         self.on_epoch_finished = []
         self.init_model(mode=mode)
 
@@ -52,7 +52,7 @@ class Model(object):
         # Load the iterator
         # Initialize the batchiterator
         print 'Loading data iterator using : %s' % self.build_ite
-        self.nb_features, self.batch_ite_train, self.batch_ite_val, self.batch_ite_test, self.batch_ite_pred = load_data(
+        self.nb_features, self.batch_ite_train, self.batch_ite_val, self.batch_ite_test = load_data(
             name=self.name,
             feats=self.feats,
             build_ite=self.build_ite,
@@ -102,6 +102,10 @@ class Model(object):
             early_stopping
         ]
 
+    def init_loss_function(self):
+        self.loss_function = getattr(
+            objectives_utils, self.obj_loss_function)
+
     def init_model(self, mode='train'):
         ''' Main function that build the model given everythin '''
 
@@ -112,14 +116,15 @@ class Model(object):
             print 'Set up the checkpoints'
             self.init_checkpoints()
 
+        print 'Initialize the loss function: %s' % (self.obj_loss_function)
+        self.init_loss_function()
         ################################################################
         # Initialize solver
         print 'Initialize the network '
         self.net = NeuralNet(
             layers=self.architecture,
             regression=True,
-            objective_loss_function=getattr(
-                lasagne.objectives, self.loss_function),
+            objective_loss_function=self.loss_function,
             objective_l2=self.reg,  # L2 regularization
             update=getattr(lasagne.updates, self.update_rule),
             update_learning_rate=self.lr,
@@ -133,7 +138,7 @@ class Model(object):
         if mode == 'train':
             unwanted = ['architecture', 'batch_ite_pred', 'batch_ite_test',
                         'batch_ite_val', 'batch_ite_train', 'conf', 'net',
-                        'on_epoch_finished', 'which_batch_iterator']
+                        'on_epoch_finished', 'which_batch_iterator', 'loss_function']
             config = {k: v for k, v in props(
                 self).iteritems() if k not in unwanted}
             self.conf = config
@@ -179,19 +184,25 @@ class Model(object):
         ################################################################
         # Predict the yield for the whole prediction set
         print 'Run the prediction'
-        final_pred = self.predict_yield(split='pred')
-        self.make_submission(final_pred)
+        pred = self.make_prediction()
+        self.make_submission(pred)
+
+    def get_loss(self, Xb, yb):
+        ''' Different from the loss because of the reg.
+        Same if reg =0.0 '''
+        return np.mean(self.loss_function(self.net.predict(Xb), yb))
 
     def get_loss_set(self, split='train'):
         ''' Return the MSE mean squared error for the whole set '''
         scores = []
         for Xb, yb in self.which_batch_iterator[split]:
-            scores.append(self.net.get_score(Xb, yb))
+            scores.append(self.get_loss(Xb, yb))
         return np.array(scores).mean()
 
     def get_score_set(self, split='train'):
 
         df = self.predict_yield(split)
+        df = df[df['yield'] != -1]
         return np.sqrt(mean_squared_error(df['yield'], df['yield_pred']))
 
     def predict_yield(self, split):
@@ -225,6 +236,15 @@ class Model(object):
         df_pred = pd.DataFrame(
             df_pred.values(), index=df_pred.keys(), columns=['yield_pred'])
         return df.join(df_pred)
+
+    def make_prediction(self):
+        pred = []
+        pred.append(self.predict_yield('train'))
+        pred.append(self.predict_yield('val'))
+        pred.append(self.predict_yield('test'))
+        pred = reduce(lambda a, b: a.append(b), pred)
+        pred = pred[pred['type'] == 'prediction']
+        return pred
 
     def make_submission(self, df):
         ''' Given a dataframe, make the prediction '''
