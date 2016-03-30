@@ -45,6 +45,62 @@ def load_raw_data():
     name = os.path.join(fognet, 'data', 'submission_format.csv')
     submission_format = pd.read_csv(name, index_col=0, parse_dates=[0])
 
+    micro_feats = {'percip_mm': ' Perciptitation (mm)',
+                   'humidity': ' A measure of the humidity in the air',
+                   'temp': ' The temperature',
+                   'leafwet450_min': ' Leaf wetness (a measure of the presence of dew) sensor 1',
+                   'leafwet460_min': ' Leaf wetness (a measure of the presence of dew) sensor 2',
+                   'leafwet_lwscnt': ' Leaf wetness (a measure of the presence of dew) sensor 3',
+                   'gusts_ms': ' A measure of the highest gust during the reporting interval',
+                   'wind_dir': ' The dominant direction the wind is blowing in',
+                   'wind_ms': ' A measure of the current wind speed'}
+
+    aeroport_feats = {"W'W'": 'Recent weather phenomena of operational significance',
+                      'c': 'Total cloud cover',
+                      'VV': 'Horizontal visibility (km)',
+                      'DD': 'Mean wind direction (compass points) at a height of 10-12 metres',
+                      'WW': 'Special present weather phenomena observed at or near the aerodrome',
+                      'P': 'Atmospheric pressure reduced to mean sea level (millimeters of mercury)',
+                      'ff10': 'Maximum gust value at a height of 10:12 metres above the earth',
+                      'U': 'Relative humidity (%) at a height of 2 metres above the earth',
+                      'T': 'Air temperature (degrees Celsius) at 2 metre height above the earth surface',
+                      'Ff': 'Mean wind speed at a height of 10:12 metres above the earths surface',
+                      'Td': 'Dewpoint temperature at a height of 2 metres above the earth surface (degrees Celsius)',
+                      'P0': 'Atmospheric pressure at weather station level (millimeters of mercury)'}
+    aga_feats = {'aga_%s' % (f): val for f, val in aeroport_feats.iteritems()}
+    guel_feats = {'guel_%s' %
+                  (f): val for f, val in aeroport_feats.iteritems()}
+
+    sidi_feats = {'Nh': ' Amount of all the CL cloud present or, if no CL cloud is present, the amount of all the CM cloud present',
+                  'Tx': ' Maximum air temperature (degrees Celsius) during the past period (not exceeding 12 hours)',
+                  'DD': ' Mean wind direction (compass points) at a height of 10 12 metres above the ',
+                  'tR': ' The period of time during which the specified amount of precipitation was accumulated',
+                  'Tn': ' Minimum air temperature (degrees Celsius) during the past period (not exceeding 12 hours)',
+                  'ff10': ' Maximum gust value at a height of 10-12 metres above the earth surface over ',
+                  'Tg': ' The minimum soil surface temperature at night. (degrees Celsius)',
+                  'Td': ' Dewpoint temperature at a height of 2 metres above the earth surface (degrees Celsius)',
+                  'Po': ' Atmospheric pressure at weather station level (millimeters of mercury)',
+                  'E': 'State of the ground with snow or measurable ice cover.',
+                  'Ff': ' Mean wind speed at a height of 10-12 metres above the earth surface ',
+                  'RRR': ' Amount of precipitation (millimeters)',
+                  'E': ' State of the ground without snow or measurable ice cover',
+                  'H': ' Height of the base of the lowest clouds (m)',
+                  'ff3': ' Maximum gust value at a height of 10-12 metres (m s-1)',
+                  'sss': ' Snow depth (cm)',
+                  'N': ' Total cloud cover',
+                  'P': ' Atmospheric pressure reduced to mean sea level (millimeters of mercury)',
+                  'U': ' Relative humidity (%) at a height of 2 metres above the earth',
+                  'T': ' Air temperature (degrees Celsius) at 2 metre height above the earth surface',
+                  'VV': ' Horizontal visibility (km)',
+                  'WW': ' Present weather reported from a weather station.',
+                  'Ch': ' Clouds of the genera Cirrus, Cirrocumulus and Cirrostratus',
+                  'Cm': ' Clouds of the genera Altocumulus, Altostratus and Nimbostratus',
+                  'Cl': ' Clouds of the genera Stratocumulus, Stratus, Cumulus and Cumulonimbus',
+                  'Pa': ' Pressure tendency: changes in atmospheric pressure over the last three hours (millimeters of mercury).',
+                  'W2': ' Past weather (weather between the periods of observation) 2',
+                  'W1': ' Past weather (weather between the periods of observation) 1'}
+    sidi_feats = {'sidi_%s' % (f): val for f, val in sidi_feats.iteritems()}
+
     return {'microclimat_train': microclimat_train,
             'microclimat_test': microclimat_test,
             'microclimat_train_5m': microclimat_train_5m,
@@ -52,6 +108,10 @@ def load_raw_data():
             'macro_guelmim': macro_guelmim,
             'macro_sidi': macro_sidi,
             'macro_aga': macro_aga,
+            'aga_feats': aga_feats,
+            'guel_feats': guel_feats,
+            'sidi_feats': sidi_feats,
+            'micro_feats': micro_feats,
             'labels': labels,
             'submission_format': submission_format}
 
@@ -121,27 +181,33 @@ def train_val_test_split(df):
     return train, val, test
 
 
-def build_dataset(name):
-    ''' build micro data
+def build_dataset():
+    ''' build dataset
     Be carrefull, all the submission date are not contained
     in the test set. Maybe use interpilation !
     '''
 
     data = load_raw_data()
-    if name == 'micro':
-        train = data['microclimat_train']
-        train['type'] = 'training'
-        labels = data['labels']
-        test = data['microclimat_test']
-        sub = data['submission_format']
-        sub['type'] = 'prediction'
-        sub = sub.drop('yield', axis=1)
-        df = train.append(sub.join(test, how='left'))
-        df = df.join(labels, how='left')
-        df['yield'] = df['yield'].fillna(-1)
-        df = df.sort_index()
-    else:
-        raise ValueError('The data format %s is not impemented yet' % (name))
+    train = data['microclimat_train']
+    train['type'] = 'training'
+    labels = data['labels']
+    test = data['microclimat_test']
+    sub = data['submission_format']
+    sub['type'] = 'prediction'
+    sub = sub.drop('yield', axis=1)
+    df = train.append(sub.join(test, how='left'))
+    df = df.join(labels, how='left')
+    df['yield'] = df['yield'].fillna(-1)
+    df = df.sort_index()
+    dfaga = data['macro_aga']
+    dfaga.columns = ['aga_%s' % (f) for f in dfaga.columns]
+    dfsidi = data['macro_sidi']
+    dfsidi.columns = ['sidi_%s' % (f) for f in dfsidi.columns]
+    dfsidi = dfsidi.resample('2H').ffill()
+    dfguel = data['macro_guelmim']
+    dfguel.columns = ['guel_%s' % (f) for f in dfguel.columns]
+    df = df.join(dfguel, how='left').join(
+        dfsidi, how='left').join(dfaga, how='left')
     return df
 
 
@@ -170,7 +236,7 @@ class Data(object):
 
         # Transform the dataframe
         non_feats = [f for f in train.columns if f not in self.feats]
-        train_tmp = self.pipeline.df_transform(
+        train_tmp = self.pipeline.df_TRANSFORM(
             train[self.feats]).join(train[non_feats])
 
         val_tmp = self.pipeline.df_transform(

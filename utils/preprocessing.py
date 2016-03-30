@@ -1,23 +1,45 @@
 from sklearn.preprocessing import Imputer
 from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import Pipeline
-from sklearn.base import TransformerMixin
+from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.base import TransformerMixin, BaseEstimator
 import pandas as pd
+import numpy as np
 
 # Possible processing object
 
 
-class BaseTransformerMixin(TransformerMixin):
+class FeatureSelector(TransformerMixin, BaseEstimator):
+    '''
+    Feature selector class
+    parameter:
 
-    def get_params(self, deep=True):
-        return self.__dict__
+    features : feature you want to select.
+    '''
 
-    def set_params(self, **params):
-        for key, val in params.iteritems():
-            setattr(self, key, val)
+    def __init__(self, features=None):
+        self.features = features
+
+    def transform(self, X):
+        return X[self.features]
+
+    def fit(self, X, y=None):
+        return self
 
 
-class MissingValueInputer(BaseTransformerMixin):
+class NumericFeatureSelector(TransformerMixin, BaseEstimator):
+    '''
+    Feature selector class. Among the feature proposed
+    return only columns with numeric values !
+    '''
+
+    def transform(self, X):
+        return X.select_dtypes(include=[np.number])
+
+    def fit(self, X, y=None):
+        return self
+
+
+class MissingValueInputer(TransformerMixin, BaseEstimator):
 
     def __init__(self, method='time'):
         self.method = method
@@ -29,7 +51,7 @@ class MissingValueInputer(BaseTransformerMixin):
         return self
 
 
-class FillRemainingNaN(BaseTransformerMixin):
+class FillRemainingNaN(TransformerMixin, BaseEstimator):
 
     def __init__(self, method='bfill'):
         self.method = method
@@ -48,22 +70,55 @@ class MyStandardScaler(StandardScaler):
     pass
 
 
-class MyPipeline(Pipeline):
+class Indexer(TransformerMixin, BaseEstimator):
+    '''
+    Get the result of FeatureUnion and
+    index it as the original dataframe +
+    add the columns that have not been processed
+    , i.e. yield, type, set ....
+    '''
 
-    def df_transform(self, df):
-        df_tmp = pd.DataFrame(self.transform(df),
-                              columns=df.columns,
-                              index=df.index)
-        return df_tmp
+    def __init__(self, df):
+        self.df = df
+
+    def transform(self, X):
+        nfeats = X.shape[1]
+        name_feats = ['feat_%d' % d for d in range(nfeats)]
+        feat = pd.DataFrame(X, index=self.df.index, columns=name_feats)
+        return feat.join(self.df, how='left')
+
+    def fit(self, X, y=None):
+        return self
 
 # Build the pipe
 
 
-def build_pipeline(pipe_list, pipe_kwargs):
+def build_one_pipeline(pipe_list, pipe_kwargs):
+    # try:
+    steps = [(name, globals()[name]()) for name in pipe_list]
+    # except:
+    #     raise ValueError('You pipe_list is fucked up')
+    pipe = Pipeline(steps)
+    pipe.set_params(**pipe_kwargs)
+    return pipe
+
+
+def build_entire_pipeline(pipe_list, pipe_kwargs, df_indexer):
+    '''
+    Build a pipeline base on first
+    FeatureUnion to build the features
+    Indexer to return a dataframe with the good
+    index and the necessary columns
+    '''
     try:
-        steps = [(name, globals()[name]()) for name in pipe_list]
+        assert pipe_list.keys() == pipe_kwargs.keys()
+        features = FeatureUnion([(key, build_one_pipeline(
+            pipe_list[key], pipe_kwargs[key])) for key in pipe_list.keys()])
     except:
         raise ValueError('You pipe_list is fucked up')
-    pipe = MyPipeline(steps)
-    pipe.set_params(**pipe_kwargs)
+
+    pipe = Pipeline([
+        ('feature', features),
+        ('index', Indexer(df_indexer))
+    ])
     return pipe

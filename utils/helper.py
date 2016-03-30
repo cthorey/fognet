@@ -3,6 +3,14 @@ import json
 from time import strftime
 
 
+class myDict(dict):
+    ''' A special class to handle stuff '''
+
+    def update(self, *args):
+        dict.update(self, *args)
+        return self
+
+
 def dump_conf_file(config, fname):
     conf_file = os.path.join(fname, 'conf_model.json')
     with open(conf_file, 'w+') as f:
