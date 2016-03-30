@@ -9,6 +9,10 @@ fognet = os.path.join('~', 'Documents', 'project', 'competition', 'fognet')
 conf = {}
 
 ####################################
+# Version code
+conf['version'] = 'version1'
+
+####################################
 # Model definition
 conf['overwrite'] = True
 conf['continue_training'] = False
