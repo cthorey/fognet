@@ -180,4 +180,5 @@ dependencies:
   - tables==3.2.2
   - tabulate==0.7.5
   - theano==0.8.0rc1
+  - tqdm==3.8.0
 
