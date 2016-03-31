@@ -3,6 +3,7 @@ import sys
 import json
 import sys
 sys.path.append('../')
+from multiprocessing import cpu_count
 from utils.initialization import *
 from utils.data_utils import load_raw_data
 from utils.helper import myDict
@@ -15,6 +16,7 @@ conf = {}
 ####################################
 # Version code
 conf['version'] = 'version1'
+conf['nb_cpus'] = 4
 
 ####################################
 # Model definition

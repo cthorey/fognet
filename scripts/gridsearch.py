@@ -57,5 +57,5 @@ if __name__ == '__main__':
 
     confs = conf_generator(config, parameters_grid)
     print('We are going to run %d different models' % (len(confs)))
-    Parallel(n_jobs=cpu_count() // 3)(delayed(train_model)(
+    Parallel(n_jobs=config['nb_cpus'])(delayed(train_model)(
         conf, parameters_grid.keys()) for conf in confs)
