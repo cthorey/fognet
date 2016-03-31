@@ -94,10 +94,10 @@ class Indexer(TransformerMixin, BaseEstimator):
 
 
 def build_one_pipeline(pipe_list, pipe_kwargs):
-    # try:
-    steps = [(name, globals()[name]()) for name in pipe_list]
-    # except:
-    #     raise ValueError('You pipe_list is fucked up')
+    try:
+        steps = [(name, globals()[name]()) for name in pipe_list]
+    except:
+        raise ValueError('You pipe_list is fucked up')
     pipe = Pipeline(steps)
     pipe.set_params(**pipe_kwargs)
     return pipe

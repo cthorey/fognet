@@ -9,6 +9,7 @@ from utils.train_utils import *
 from joblib import Parallel, delayed
 from multiprocessing import cpu_count
 from random import shuffle
+from utils import pipe_def
 
 
 def update_dict(config, new_parameters):

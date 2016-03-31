@@ -14,10 +14,7 @@ class BaseBatchIterator(object):
 
     '''
 
-    def __init__(self, feats=[], label='yield', batch_size=25, size_seq=25, stride=1, verbose=False):
-        # feature to take from the dataframe
-        self.feats = feats
-        self.nfeats = len(feats)
+    def __init__(self, label='yield', batch_size=25, size_seq=25, stride=1, verbose=False):
         # Target
         self.label = label
         # Size of the sequence you want to enroll in the rnn
@@ -33,6 +30,9 @@ class BaseBatchIterator(object):
 
     def __call__(self, df):
         self.df = df
+        # feature to take from the dataframe
+        self.feats = [f for f in df.columns if f.split('_')[0] == 'feat']
+        self.nfeats = len(self.feats)
         self.stack_seqs = self.stack_sequence()
         return self
 

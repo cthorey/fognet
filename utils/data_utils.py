@@ -182,7 +182,8 @@ def train_val_test_split(df):
 
 
 def build_dataset():
-    ''' build dataset
+    ''' build dataset with all the data resample on the
+    same index than train+pred.
     Be carrefull, all the submission date are not contained
     in the test set. Maybe use interpilation !
     '''
@@ -213,14 +214,13 @@ def build_dataset():
 
 class Data(object):
 
-    def __init__(self, name, feats, pipeline, batch_size, seq_length, stride):
-        self.data = load_raw_data()
-        self.df = build_dataset(name)
+    def __init__(self, pipeline, batch_size=35, seq_length=200, stride=1):
+        self.df = build_dataset()
         self.pipeline = pipeline
-        self.feats = feats
         self.batch_size = batch_size
         self.seq_length = seq_length
         self.stride = stride
+        self.non_feats = ['yield', 'group', 'type']
 
     def benchmark(self, n_obs=12):
         ''' process data for the benchmark
@@ -232,21 +232,18 @@ class Data(object):
         train, val, test = train_val_test_split(self.df)
 
         # training inputer
-        self.pipeline.fit(train[self.feats])
+        self.pipeline.fit(train)
 
         # Transform the dataframe
-        non_feats = [f for f in train.columns if f not in self.feats]
-        train_tmp = self.pipeline.df_TRANSFORM(
-            train[self.feats]).join(train[non_feats])
 
-        val_tmp = self.pipeline.df_transform(
-            val[self.feats]).join(val[non_feats])
+        self.pipeline.set_params(**{'index__df': train[self.non_feats]})
+        train_tmp = self.pipeline.transform(train)
+        self.pipeline.set_params(**{'index__df': val[self.non_feats]})
+        val_tmp = self.pipeline.transform(val)
+        self.pipeline.set_params(**{'index__df': test[self.non_feats]})
+        test_tmp = self.pipeline.transform(test)
 
-        test_tmp = self.pipeline.df_transform(
-            test[self.feats]).join(test[non_feats])
-
-        iter_kwargs = dict(feats=self.feats,
-                           label='yield',
+        iter_kwargs = dict(label='yield',
                            batch_size=self.batch_size,
                            size_seq=self.seq_length,
                            stride=self.stride)
@@ -254,21 +251,17 @@ class Data(object):
         batch_ite_val = BaseBatchIterator(**iter_kwargs)(val_tmp)
         batch_ite_test = BaseBatchIterator(**iter_kwargs)(test_tmp)
 
-        return len(self.feats), batch_ite_train, batch_ite_val, batch_ite_test
+        return batch_ite_train, batch_ite_val, batch_ite_test
 
 
-def load_data(name='micro',
-              feats=['humidity', 'temp'],
+def load_data(pipeline,
               build_ite='benchmark',
-              pipeline='base',
               batch_size=25,
               seq_length=25,
               stride=1):
     ''' load the data according to the desire processing
     return batch iterator for train/test split !'''
-    data = Data(name=name,
-                feats=feats,
-                pipeline=pipeline,
+    data = Data(pipeline=pipeline,
                 batch_size=batch_size,
                 seq_length=seq_length,
                 stride=stride)

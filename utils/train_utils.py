@@ -14,6 +14,7 @@ from hook import (
     EarlyStopping
 )
 import pickle
+import pprint
 
 
 class Model(object):
@@ -45,21 +46,23 @@ class Model(object):
     def init_data(self):
         ################################################################
         # Load the preprocessing
-        print 'Loading the prepro pipeline : %s' % self.pipe_list
-        pipeline = build_pipeline(self.pipe_list, self.pipe_kwargs)
+        print 'Loading the prepro pipeline'
+        pprint.pprint(self.pipe)
+        self.df = build_dataset()
+        pipeline = build_entire_pipeline(
+            self.pipe['pipe_list'], self.pipe['pipe_kwargs'], self.df)
 
         ################################################################
         # Load the iterator
         # Initialize the batchiterator
         print 'Loading data iterator using : %s' % self.build_ite
-        self.nb_features, self.batch_ite_train, self.batch_ite_val, self.batch_ite_test = load_data(
-            name=self.name,
-            feats=self.feats,
-            build_ite=self.build_ite,
+        self.batch_ite_train, self.batch_ite_val, self.batch_ite_test = load_data(
             pipeline=pipeline,
+            build_ite=self.build_ite,
             batch_size=self.batch_size,
             seq_length=self.seq_length,
             stride=self.stride)
+        self.nb_features = self.batch_ite_train.nfeats
 
     def init_architecture(self):
         ################################################################
@@ -136,7 +139,7 @@ class Model(object):
         )
         self.net.initialize()
         if mode == 'train':
-            unwanted = ['architecture', 'batch_ite_pred', 'batch_ite_test',
+            unwanted = ['architecture', 'batch_ite_test', 'df',
                         'batch_ite_val', 'batch_ite_train', 'conf', 'net',
                         'on_epoch_finished', 'which_batch_iterator', 'loss_function']
             config = {k: v for k, v in props(
