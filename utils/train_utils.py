@@ -208,6 +208,12 @@ class Model(object):
         df = df[df['yield'] != -1]
         return np.sqrt(mean_squared_error(df['yield'], df['yield_pred']))
 
+    def get_normalized_score_set(self, split='train'):
+
+        df = self.predict_yield(split)
+        df = df[df['yield'] != -1]
+        return np.sqrt(mean_squared_error(df['yield'], df['yield_pred'])) / np.mean(df['yield'])
+
     def predict_yield(self, split):
         ''' The way we construct the data is a convolution.
         Therefore we have to unconvolver the batch by gp to be
