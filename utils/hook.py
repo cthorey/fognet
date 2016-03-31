@@ -22,10 +22,6 @@ class EarlyStopping(object):
         current_train = train_history[-1]['train_loss']
         current_epoch = train_history[-1]['epoch']
 
-        # Ignore if training loss is greater than valid loss
-        if current_train > current_valid:
-            return
-
         if current_valid < self.best_valid:
             self.best_valid = current_valid
             self.best_valid_epoch = current_epoch
