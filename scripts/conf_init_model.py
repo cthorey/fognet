@@ -24,9 +24,6 @@ conf['overwrite'] = True
 conf['continue_training'] = False
 
 # Iterator
-conf['name'] = 'micro'
-conf['feats'] = ['percip_mm', 'humidity', 'temp', 'leafwet450_min',
-                 'leafwet460_min', 'leafwet_lwscnt', 'gusts_ms', 'wind_dir', 'wind_ms']
 conf['build_ite'] = 'benchmark'
 conf['stride'] = 1
 conf['batch_size'] = 25
