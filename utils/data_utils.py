@@ -181,6 +181,28 @@ def train_val_test_split(df):
     return train, val, test
 
 
+def train_test_split(df):
+    ''' Return a train/val/test split of the data for training '''
+
+    df = add_group_column_to_data(df)
+    n = df.groupby('group').ngroups
+
+    train = []
+    test = []
+    for name, gp in df.groupby('group'):
+        train.append(gp.iloc[:int(len(gp) * 0.75)])
+        test.append(gp.iloc[int(len(gp) * 0.75):])
+
+    train = reduce(lambda a, b: a.append(b), train)
+    test = reduce(lambda a, b: a.append(b), test)
+    print('Le train is composed by %d group and %d observation' %
+          (train.groupby('group').ngroups, len(train)))
+    print('Le test is composed by %d group and %d observation' %
+          (test.groupby('group').ngroups, len(test)))
+
+    return train, test
+
+
 def build_dataset():
     ''' build dataset with all the data resample on the
     same index than train+pred.

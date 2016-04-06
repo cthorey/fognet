@@ -49,7 +49,8 @@ class ArimaModel(object):
     def fit_best_arima(self, x, xreg):
         robj.globalenv['xregressors'] = xreg
         robj.globalenv['x'] = x
-        robj.r('fit <- auto.arima(x,xreg=xregressors)')
+        robj.r('fit <- auto.arima(x,xreg=xregressors,d=1)')
+        robj.r('print(summary(fit))')
         arma = robj.r('fit$arma')
         arma_names = ['AR', 'MA', 'Seasonal_AR',
                       'Seasonal_AM', 'Period', 'S', 'Seasonal_S']
@@ -64,36 +65,65 @@ class ArimaModel(object):
         return order, seasonal_order
 
     def partial_fit(self, df, order_params='auto'):
+        train, test = train_test_split(df)
+
         if order_params == 'auto':
             order, seasonal_order = self.fit_best_arima(
-                df['yield'], df[self.regressors])
+                train['yield'], train[self.regressors])
         else:
             order = order_params[0]
             seasonal_order = order_params[1]
 
-        model = sm.tsa.statespace.SARIMAX(endog=df['yield'],
-                                          exog=df[self.regressors],
-                                          order=order,
-                                          seasonal_order=seasonal_order)
-        results = model.fit()
-        print(results.summary())
-        pred = results.get_prediction().predicted_mean
-        self.df.loc[df.index, 'yield_pred'] = pred
+        # traning
+        train_model = sm.tsa.SARIMAX(endog=train['yield'],
+                                     exog=train[self.regressors],
+                                     order=order,
+                                     seasonal_order=seasonal_order)
+        train_results = train_model.fit()
+        print(train_results.summary())
+        train['yield_pred'] = train_results.get_prediction().predicted_mean
+        train_score = self.get_score(train)
+
+        # testing
+        test_model = sm.tsa.SARIMAX(endog=test['yield'],
+                                    exog=test[self.regressors],
+                                    order=order,
+                                    seasonal_order=seasonal_order)
+        test_results = test_model.filter(train_results.params)
+        test['yield_pred'] = test_results.get_prediction().predicted_mean
+        test_score = self.get_score(test)
+
+        # Update the main dataframe
+        model = sm.tsa.SARIMAX(endog=df['yield'],
+                               exog=df[self.regressors],
+                               order=order,
+                               seasonal_order=seasonal_order)
+        results = model.filter(train_results.params)
+        prediction = results.get_prediction().predicted_mean
+        self.df.loc[df.index, 'yield_pred'] = prediction
+
+        return train_score, test_score
 
     def fit(self):
+        train_score, test_score = [], []
         self.df['yield_pred'] = 0
         dfg = self.df.groupby('group')
         for name, gp in tqdm(dfg, total=dfg.ngroups):
-            self.partial_fit(gp, order_params=((0, 1, 2), (0, 0, 0, 12)))
+            trains, tests = self.partial_fit(gp,
+                                             order_params=(
+                                                 (0, 1, 2), (0, 0, 0, 0)))
+            train_score.append(trains)
+            test_score.append(tests)
 
-        print 'RMSE'
-        print self.get_score()
+        print('RMSE')
+        print('RMSE - Train set : %1.3f; Test set : %1.3f' %
+              (np.array(train_score).mean(), np.array(test_score).mean()))
 
         self.make_submission(self.df)
 
-    def get_score(self):
+    def get_score(self, df):
 
-        df = self.df[['yield', 'yield_pred']].dropna()
+        df = df[['yield', 'yield_pred']].dropna()
         return np.sqrt(mean_squared_error(df['yield'], df['yield_pred']))
 
     def make_submission(self, df):
