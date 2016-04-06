@@ -98,15 +98,16 @@ class ArimaModel(BaseModel):
     def fit(self):
         train_score, test_score = [], []
         dfgroup = self.df.groupby('group')
-        # try:
-        for name, gp in tqdm(dfgroup, total=dfgroup.ngroups):
-            trains, tests = self.fit_group(gp)
-            train_score.append(trains)
-            test_score.append(tests)
-        self.make_submission(self.df)
-        # except:
-        #     train_score = 1e5 * np.ones((1, 5))
-        #     test_score = 1e5 * np.ones((1, 5))
+        try:
+            for name, gp in tqdm(dfgroup, total=dfgroup.ngroups):
+                trains, tests = self.fit_group(gp)
+                train_score.append(trains)
+                test_score.append(tests)
+            self.make_submission(self.df)
+        except:
+            train_score = 1e5 * np.ones((1, 5))
+            test_score = 1e5 * np.ones((1, 5))
+            test_score[0] = 10
 
         self.get_summary(train_score, split='train')
         self.get_summary(test_score, split='test')

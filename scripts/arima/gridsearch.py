@@ -34,9 +34,9 @@ def conf_generator(config, parameters_grids):
     return confs
 
 
-def train_model(config, hp):
-    model = Model(config=config, mode='train', hp=hp)
-    model.train()
+def train_model(conf, hp):
+    model = ArimaModel(config=conf, mode='train', hp=hp.keys())
+    model.fit()
 
 
 def train_model_with_oscar(conf, scientist, experiment):
@@ -48,12 +48,12 @@ def train_model_with_oscar(conf, scientist, experiment):
     conf = update_dict(conf, parameters)
     model = ArimaModel(config=conf, mode='train', hp=parameters.keys())
     model.fit()
-    resuts_key = ['rmse', 'aic', 'bic', 'hqic']
-    results = {'loss': model.val_rmse}
+    result_keys = ['rmse', 'aic', 'bic', 'hqic']
+    results = {'loss': model.test_rmse}
     results.update({'train_%s' % (key): getattr(
-        model, 'train_%s' % (key)) for key in results})
+        model, 'train_%s' % (key)) for key in result_keys})
     results.update({'test_%s' % (key): getattr(
-        model, 'test_%s' % (key)) for key in results})
+        model, 'test_%s' % (key)) for key in result_keys})
     scientist.update(job, results)
 
 if __name__ == '__main__':
@@ -68,14 +68,16 @@ if __name__ == '__main__':
     config.update(parse_conf_file(config['conf']))
     config['time'] = get_current_datetime()
 
+    print config['oscar']
+    sys.exit()
     if config['oscar']:
-        parameters_def = {'AR': {'min': 0, 'max': 12, 'step': 1},
+        parameters_def = {'AR': {'min': 0, 'max': 3, 'step': 1},
                           'D': [0, 1],
-                          'MA': {'min': 0, 'max': 12, 'step': 1},
-                          'Season_RA': {'min': 0, 'max': 12, 'step': 1},
+                          'MA': {'min': 0, 'max': 3, 'step': 1},
+                          'Season_RA': {'min': 0, 'max': 3, 'step': 1},
                           'Season_D': [0, 1],
-                          'Season_MA': {'min': 0, 'max': 12, 'step': 1},
-                          'Season_Period': [12, 24, 48]}
+                          'Season_MA': {'min': 0, 'max': 3, 'step': 1},
+                          'Season_Period': [0, 2]}
         scientist = Oscar(config['access_token_oscar'])
         experiment = {
             'name': 'SARIMAX - Model selection',
@@ -88,8 +90,17 @@ if __name__ == '__main__':
             train_model_with_oscar(config, scientist, experiment)
 
     else:
-        parameters_grid = {'RA': [1, 2, 3]}
+        parameters_grid = {'AR': range(7),
+                           'D': [0, 1],
+                           'MA': range(7),
+                           'Season_RA': range(7),
+                           'Season_D': [0, 1],
+                           'Season_MA': range(7),
+                           'Season_Period': [0, 6, 12]}
         confs = conf_generator(config, parameters_grid)
         print('We are going to run %d different models' % (len(confs)))
-        Parallel(n_jobs=config['nb_cpus'])(delayed(train_model)(
-            conf, parameters_grid.keys()) for conf in confs)
+        sys.exit()
+        for conf in tqdm(confs, total=len(confs)):
+            train_model(conf, parameters_grid.keys())
+        # Parallel(n_jobs=config['nb_cpus'])(delayed(train_model)(
+        #     conf, parameters_grid.keys()) for conf in confs)
