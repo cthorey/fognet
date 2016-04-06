@@ -35,3 +35,14 @@ def get_current_datetime():
 def props(cls):
     ''' Return a dict of the attribut of the class without special method'''
     return {key: val for key, val in cls.__dict__.iteritems() if key[:1] != '_'}
+
+
+def control_type_parameter(parameters):
+    ''' return the good type for the parameters'''
+    dict_type = {}
+    dict_type.update(
+        {f: int for f in ['nb_layers', 'stride', 'hiddens', 'seq_length']})
+    dict_type.update({f: float for f in ['lr', 'reg']})
+    dict_type.update({f: str for f in ['update_rule']})
+
+    return {key: dict_type[key](val) for key, val in parameters.iteritems()}

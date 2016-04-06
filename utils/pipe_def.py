@@ -83,3 +83,13 @@ pipe_kwargs = {'micro': kwargs_micro,
                'macro_guel': kwargs_macro_guel
                }
 pipe2 = pipe(pipe_list, pipe_kwargs)
+
+############################
+# pipe3
+pipe_list3 = ['FeatureSelector',
+              'MissingValueInputer',
+              'FillRemainingNaN']
+
+pipe_list = {'micro': pipe_list3}
+pipe_kwargs = {'micro': kwargs_micro}
+pipe3 = pipe(pipe_list, pipe_kwargs)

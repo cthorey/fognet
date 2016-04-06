@@ -20,8 +20,8 @@ def get_platform_and_create_folder(fognet):
         os.path.join(fognet, 'models', name_platform))
     if not os.path.isdir(path_models):
         os.mkdir(path_models)
-
-    return name_platform
+    access_token_oscar = 'bv46kOZd1WwBFo33lzTZjFTKKUOTGgA6RwlZQ6CWag9zfnNlbnNvdXQtb3NjYXJyEQsSBFVzZXIYgICAgN7PjQoM'
+    return name_platform, access_token_oscar
 
 
 def initialize_work_tree(fognet, conf):
