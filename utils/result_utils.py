@@ -31,3 +31,29 @@ def get_result(root, hp=['h', 'reg', 'seq_length']):
     results = results.sort_values(by='val')
     results.index = range(len(results))
     return results
+
+
+def get_result_arima(root, hp=['h', 'reg', 'seq_length']):
+    models = [f for f in os.listdir(root) if f != 'conf_model.json']
+    results = []
+    for model in tqdm(models, ncols=len(models)):
+        path_model = os.path.join(root, model)
+        try:
+            conf = parse_conf_file(os.path.join(path_model, 'conf_model.json'))
+            result_keys = ['rmse', 'aic', 'bic', 'hqic']
+            score = {}
+            score.update({'train_%s' % (key): conf[
+                         'train_%s' % (key)] for key in result_keys})
+            score.update({'test_%s' % (key): conf[
+                         'test_%s' % (key)] for key in result_keys})
+            results.append([root, model] +
+                           [conf[key] for key in hp] +
+                           score.values())
+        except:
+            pass
+
+    results = pd.DataFrame(
+        results, columns=['root', 'model'] + hp + score.keys())
+    results = results.sort_values(by='test_rmse')
+    results.index = range(len(results))
+    return results

@@ -35,7 +35,7 @@ def conf_generator(config, parameters_grids):
 
 
 def train_model(conf, hp):
-    model = ArimaModel(config=conf, mode='train', hp=hp.keys())
+    model = ArimaModel(config=conf, mode='train', hp=hp)
     model.fit()
 
 
@@ -59,7 +59,7 @@ def train_model_with_oscar(conf, scientist, experiment):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--conf', required=True, help='Baseline conf file')
-    parser.add_argument('--oscar', required=True)
+    parser.add_argument('--search_method', required=True)
     parser.add_argument('--overwrite', action='store_true')
     parser.add_argument('--continue_training', action='store_true')
 
@@ -68,9 +68,8 @@ if __name__ == '__main__':
     config.update(parse_conf_file(config['conf']))
     config['time'] = get_current_datetime()
 
-    print config['oscar']
-    sys.exit()
-    if config['oscar']:
+    print config['search_method']
+    if config['search_method'] == 'oscar':
         parameters_def = {'AR': {'min': 0, 'max': 3, 'step': 1},
                           'D': [0, 1],
                           'MA': {'min': 0, 'max': 3, 'step': 1},
@@ -89,7 +88,7 @@ if __name__ == '__main__':
         while True:
             train_model_with_oscar(config, scientist, experiment)
 
-    else:
+    elif config['search_method'] == 'brut':
         parameters_grid = {'AR': range(7),
                            'D': [0, 1],
                            'MA': range(7),
@@ -98,9 +97,11 @@ if __name__ == '__main__':
                            'Season_MA': range(7),
                            'Season_Period': [0, 6, 12]}
         confs = conf_generator(config, parameters_grid)
-        print('We are going to run %d different models' % (len(confs)))
-        sys.exit()
+        print 'We are going to run %d different models' % (len(confs))
         for conf in tqdm(confs, total=len(confs)):
             train_model(conf, parameters_grid.keys())
+    else:
+        raise ValueError()
+
         # Parallel(n_jobs=config['nb_cpus'])(delayed(train_model)(
         #     conf, parameters_grid.keys()) for conf in confs)
