@@ -220,7 +220,7 @@ def build_dataset():
     sub = sub.drop('yield', axis=1)
     df = train.append(sub.join(test, how='left'))
     df = df.join(labels, how='left')
-    df['yield'] = df['yield'].fillna(-1)
+    df['yield'] = df['yield']
     df = df.sort_index()
     dfaga = data['macro_aga']
     dfaga.columns = ['aga_%s' % (f) for f in dfaga.columns]

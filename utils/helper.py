@@ -37,7 +37,7 @@ def props(cls):
     return {key: val for key, val in cls.__dict__.iteritems() if key[:1] != '_'}
 
 
-def control_type_parameter(parameters):
+def control_type_parameter_lstm(parameters):
     ''' return the good type for the parameters'''
     dict_type = {}
     dict_type.update(
@@ -45,4 +45,18 @@ def control_type_parameter(parameters):
     dict_type.update({f: float for f in ['lr', 'reg']})
     dict_type.update({f: str for f in ['update_rule']})
 
+    return {key: dict_type[key](val) for key, val in parameters.iteritems()}
+
+
+def control_type_parameter_arima(parameters):
+    ''' return the good type for the parameters'''
+    dict_type = {}
+    dict_type.update(
+        {f: int for f in ['AR',
+                          'MA',
+                          'D',
+                          'Season_RA',
+                          'Season_MA',
+                          'Season_D',
+                          'Season_Period']})
     return {key: dict_type[key](val) for key, val in parameters.iteritems()}
