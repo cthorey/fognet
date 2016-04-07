@@ -69,12 +69,18 @@ class ArimaModel(BaseModel):
             raise ValueError('%s is not implemented' %
                              (self.which_architecture))
 
+    def replace_nan(x):
+        if np.isnan(x):
+            return 1e5
+        else:
+            return x
+
     def get_information_fit(self, df, fit_results):
-        return (self.get_score(df),
-                fit_results.aic,
-                fit_results.bic,
-                fit_results.hqic,
-                fit_results.nobs)
+        return (replace_nan(self.get_score(df)),
+                replace_nan(fit_results.aic),
+                replace_nan(fit_results.bic),
+                replace_nan(fit_results.hqic),
+                replace_nan(fit_results.nobs))
 
     def merge_fitted_values(self, df, results):
         dffitted = pd.DataFrame(results.fittedvalues, columns=['yield_pred'])
@@ -85,17 +91,18 @@ class ArimaModel(BaseModel):
         train, test = train_test_split(df)
 
         try:
+            print 'firt try'
             train_model = self.get_model(train)
             train_results = train_model.fit(maxiter=100)
-            if self.verbose > 1:
-                print(train_results.summary())
+            print(train_results.summary())
         except ValueError:
+            print 'second try'
             train_model = self.get_model(
                 train, enforce_stationarity=False, enforce_invertibility=False)
             train_results = train_model.fit(maxiter=100)
-            if self.verbose > 1:
-                print(train_results.summary())
+            print(train_results.summary())
         except:
+            print 'third try'
             raise ValueError()
 
         train = self.merge_fitted_values(train, train_results)
