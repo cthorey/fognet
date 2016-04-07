@@ -42,19 +42,20 @@ conf['Season_D'] = 0
 conf['Season_Period'] = 0
 
 # Oscar stuff
-conf['parameters_def'] = {'AR': {'min': 0, 'max': 3, 'step': 1},
-                          'D': [0, 1],
-                          'MA': {'min': 0, 'max': 3, 'step': 1},
-                          'Season_AR': {'min': 0, 'max': 3, 'step': 1},
-                          'Season_D': [0, 1],
-                          'Season_MA': {'min': 0, 'max': 3, 'step': 1},
-                          'Season_Period': [1, 3]
+conf['parameters_def'] = {'AR': {'min': 0, 'max': 12, 'step': 1},
+                          'D': [0, 1, 2],
+                          'MA': {'min': 0, 'max': 12, 'step': 1}
                           }
-conf['experiment_name'] = 'ARIMA_ONLY'
-conf[
-    'description'] = ' Test ARIMA only with the micro datafor different parameters (orders)'
+# 'Season_AR': {'min': 0, 'max': 3, 'step': 1},
+# 'Season_D': [0, 1],
+# 'Season_MA': {'min': 0, 'max': 3, 'step': 1},
+# 'Season_Period': [1, 3]
 
-conf['verbose'] = 2
+conf['experiment_name'] = 'ARIMAX - model_0 clavius - explore the orders parameters'
+conf[
+    'description'] = ' Test ARIMAX with the micro datasets'
+
+conf['verbose'] = 0
 # Initialization
 conf['platform'], conf[
     'access_token_oscar'] = get_platform_and_create_folder(fognet)

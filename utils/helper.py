@@ -58,5 +58,6 @@ def control_type_parameter_arima(parameters):
                           'Season_AR',
                           'Season_MA',
                           'Season_D',
-                          'Season_Period']})
+                          'Season_Period',
+                          'pca_components']})
     return {key: dict_type[key](val) for key, val in parameters.iteritems()}

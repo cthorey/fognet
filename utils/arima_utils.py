@@ -8,13 +8,6 @@ from preprocessing import *
 from data_utils import *
 from helper import *
 
-
-import rpy2.robjects as robj
-from rpy2.robjects.packages import importr
-from rpy2.robjects import pandas2ri
-pandas2ri.activate()
-rforecast = importr('forecast')
-
 import pprint
 from tqdm import *
 from sklearn.metrics import mean_squared_error
