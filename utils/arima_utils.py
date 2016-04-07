@@ -64,16 +64,14 @@ class ArimaModel(BaseModel):
             print 'Set up the checkpoints'
             self.init_checkpoints()
 
-    def get_model(self, df):
-        if self.which_architecture == 'ARIMA':
-            return self.architecture(endog=df['feat_yield'],
-                                     exog=df[self.regressors],
-                                     order=self.order)
-        elif self.which_architecture == 'SARIMAX':
+    def get_model(self, df, enforce_stationarity=True, enforce_invertibility=True):
+        if self.which_architecture == 'SARIMAX':
             return self.architecture(endog=df['feat_yield'],
                                      exog=df[self.regressors],
                                      order=self.order,
-                                     seasonal_order=self.seasonal_order)
+                                     seasonal_order=self.seasonal_order,
+                                     enforce_invertibility=enforce_invertibility,
+                                     enforce_stationarity=enforce_stationarity)
         else:
             raise ValueError('%s is not implemented' %
                              (self.which_architecture))
@@ -93,10 +91,19 @@ class ArimaModel(BaseModel):
         # traning
         train, test = train_test_split(df)
 
-        train_model = self.get_model(train)
-        train_results = train_model.fit(maxiter=100)
-        if self.verbose > 1:
-            print(train_results.summary())
+        try:
+            train_model = self.get_model(train)
+            train_results = train_model.fit(maxiter=100)
+            if self.verbose > 1:
+                print(train_results.summary())
+        except ValueError:
+            train_model = self.get_model(
+                train, enforce_stationarity=False, enforce_invertibility=False)
+            train_results = train_model.fit(maxiter=100)
+            if self.verbose > 1:
+                print(train_results.summary())
+        except:
+            raise ValueError()
 
         train = self.merge_fitted_values(train, train_results)
         train_score = self.get_information_fit(train, train_results)

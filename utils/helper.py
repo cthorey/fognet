@@ -55,7 +55,7 @@ def control_type_parameter_arima(parameters):
         {f: int for f in ['AR',
                           'MA',
                           'D',
-                          'Season_RA',
+                          'Season_AR',
                           'Season_MA',
                           'Season_D',
                           'Season_Period']})

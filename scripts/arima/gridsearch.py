@@ -70,18 +70,11 @@ if __name__ == '__main__':
 
     print config['search_method']
     if config['search_method'] == 'oscar':
-        parameters_def = {'AR': {'min': 0, 'max': 3, 'step': 1},
-                          'D': [0, 1],
-                          'MA': {'min': 0, 'max': 3, 'step': 1},
-                          'Season_RA': {'min': 0, 'max': 3, 'step': 1},
-                          'Season_D': [0, 1],
-                          'Season_MA': {'min': 0, 'max': 3, 'step': 1},
-                          'Season_Period': [0, 2]}
         scientist = Oscar(config['access_token_oscar'])
         experiment = {
-            'name': 'SARIMAX - Model selection',
-            'description': 'What about that',
-            'parameters': parameters_def
+            'name': config['experiment_name'],
+            'description': config['description'],
+            'parameters': config['parameters_def']
         }
         # Parallel(n_jobs=config['nb_cpus'])(delayed(train_model_with_oscar)(
         #     config, scientist, experiment) for i in range(200))

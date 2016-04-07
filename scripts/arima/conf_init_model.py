@@ -32,7 +32,7 @@ conf['type_model'] = 'arima'
 conf['which_architecture'] = 'SARIMAX'
 
 # Hyperparameters
-conf['pca_components'] = 3
+conf['pca_components'] = 0
 conf['AR'] = 0
 conf['MA'] = 1
 conf['D'] = 1
@@ -41,8 +41,23 @@ conf['Season_MA'] = 0
 conf['Season_D'] = 0
 conf['Season_Period'] = 0
 
+# Oscar stuff
+conf['parameters_def'] = {'AR': {'min': 0, 'max': 3, 'step': 1},
+                          'D': [0, 1],
+                          'MA': {'min': 0, 'max': 3, 'step': 1},
+                          'Season_AR': {'min': 0, 'max': 3, 'step': 1},
+                          'Season_D': [0, 1],
+                          'Season_MA': {'min': 0, 'max': 3, 'step': 1},
+                          'Season_Period': [1, 3]
+                          }
+conf['experiment_name'] = 'ARIMA_ONLY'
+conf[
+    'description'] = ' Test ARIMA only with the micro datafor different parameters (orders)'
+
 conf['verbose'] = 2
 # Initialization
 conf['platform'], conf[
     'access_token_oscar'] = get_platform_and_create_folder(fognet)
+
+
 initialize_work_tree(fognet, conf)
