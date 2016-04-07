@@ -48,8 +48,12 @@ def train_model_with_oscar(conf, scientist, experiment):
     conf = update_dict(conf, parameters)
     model = ArimaModel(config=conf, mode='train', hp=parameters.keys())
     model.fit()
+    if model.test_rmse > 3:
+        loss = 3
+    else:
+        loss = model.test_rmse
+    results = {'loss': loss}
     result_keys = ['rmse', 'aic', 'bic', 'hqic']
-    results = {'loss': model.test_rmse}
     results.update({'train_%s' % (key): getattr(
         model, 'train_%s' % (key)) for key in result_keys})
     results.update({'test_%s' % (key): getattr(
