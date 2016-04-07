@@ -134,7 +134,7 @@ class ArimaModel(BaseModel):
         except:
             train_score = 1e5 * np.ones((1, 5))
             test_score = 1e5 * np.ones((1, 5))
-            test_score[0] = 10
+            test_score[0] = 2
 
         self.get_summary(train_score, split='train')
         self.get_summary(test_score, split='test')
