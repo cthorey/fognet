@@ -69,18 +69,24 @@ class ArimaModel(BaseModel):
             raise ValueError('%s is not implemented' %
                              (self.which_architecture))
 
-    def replace_nan(x):
+    def replace_nan(self, x):
         if np.isnan(x):
             return 1e5
         else:
             return x
 
+    def is_there_some_nan_fit(self, fit_results):
+        return any(np.isnan(np.array((fit_results.aic,
+                                      fit_results.bic,
+                                      fit_results.hqic,
+                                      fit_results.nobs))))
+
     def get_information_fit(self, df, fit_results):
-        return (replace_nan(self.get_score(df)),
-                replace_nan(fit_results.aic),
-                replace_nan(fit_results.bic),
-                replace_nan(fit_results.hqic),
-                replace_nan(fit_results.nobs))
+        return map(self.replace_nan, (self.get_score(df),
+                                      fit_results.aic,
+                                      fit_results.bic,
+                                      fit_results.hqic,
+                                      fit_results.nobs))
 
     def merge_fitted_values(self, df, results):
         dffitted = pd.DataFrame(results.fittedvalues, columns=['yield_pred'])
@@ -91,16 +97,18 @@ class ArimaModel(BaseModel):
         train, test = train_test_split(df)
 
         try:
-            print 'firt try'
             train_model = self.get_model(train)
             train_results = train_model.fit(maxiter=100)
-            print(train_results.summary())
+            if self.is_there_some_nan_fit(train_results):
+                raise ValueError
+            else:
+                if self.verbose > 1:
+                    print(train_results.summary())
+
         except ValueError:
-            print 'second try'
             train_model = self.get_model(
                 train, enforce_stationarity=False, enforce_invertibility=False)
             train_results = train_model.fit(maxiter=100)
-            print(train_results.summary())
         except:
             print 'third try'
             raise ValueError()
@@ -125,16 +133,16 @@ class ArimaModel(BaseModel):
     def fit(self):
         train_score, test_score = [], []
         dfgroup = self.df.groupby('group')
-        try:
-            for name, gp in tqdm(dfgroup, total=dfgroup.ngroups):
-                trains, tests = self.fit_group(gp)
-                train_score.append(trains)
-                test_score.append(tests)
-            self.make_submission(self.df)
-        except:
-            train_score = 1e5 * np.ones((1, 5))
-            test_score = 1e5 * np.ones((1, 5))
-            test_score[0] = 2
+        # try:
+        for name, gp in tqdm(dfgroup, total=dfgroup.ngroups):
+            trains, tests = self.fit_group(gp)
+            train_score.append(trains)
+            test_score.append(tests)
+        self.make_submission(self.df)
+        # except:
+        #     train_score = 1e5 * np.ones((1, 5))
+        #     test_score = 1e5 * np.ones((1, 5))
+        #     test_score[0] = 2
 
         self.get_summary(train_score, split='train')
         self.get_summary(test_score, split='test')
