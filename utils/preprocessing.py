@@ -2,6 +2,7 @@ from sklearn.preprocessing import Imputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.base import TransformerMixin, BaseEstimator
+from sklearn.decomposition import PCA
 import pandas as pd
 import numpy as np
 
@@ -78,17 +79,23 @@ class Indexer(TransformerMixin, BaseEstimator):
     , i.e. yield, type, set ....
     '''
 
-    def __init__(self, df):
+    def __init__(self, df, yield_pipe):
         self.df = df
+        self.yield_pipe = yield_pipe
 
     def transform(self, X):
         nfeats = X.shape[1]
-        name_feats = ['feat_%d' % d for d in range(nfeats)]
-        feat = pd.DataFrame(X, index=self.df.index, columns=name_feats)
+        if not self.yield_pipe:
+            name_feats = ['feat_%d' % d for d in range(nfeats)]
+            feat = pd.DataFrame(X, index=self.df.index, columns=name_feats)
+        elif self.yield_pipe:
+            name_feats = ['feat_yield']
+            feat = pd.DataFrame(X, index=self.df.index, columns=name_feats)
         return feat.join(self.df, how='left')
 
     def fit(self, X, y=None):
         return self
+
 
 # Build the pipe
 
@@ -103,7 +110,7 @@ def build_one_pipeline(pipe_list, pipe_kwargs):
     return pipe
 
 
-def build_entire_pipeline(pipe_list, pipe_kwargs, df_indexer):
+def build_entire_pipeline(pipe_list, pipe_kwargs, df_indexer, pca_components=0):
     '''
     Build a pipeline base on first
     FeatureUnion to build the features
@@ -117,8 +124,22 @@ def build_entire_pipeline(pipe_list, pipe_kwargs, df_indexer):
     except:
         raise ValueError('You pipe_list is fucked up')
 
-    pipe = Pipeline([
-        ('feature', features),
-        ('index', Indexer(df_indexer))
-    ])
+    if pipe_list.keys()[-1] == 'yield':
+        pipe = Pipeline([
+            ('feature', features),
+            ('index', Indexer(df_indexer, yield_pipe=True))
+        ])
+    else:
+        if pca_components == 0:
+            pipe = Pipeline([
+                ('feature', features),
+                ('index', Indexer(df_indexer, yield_pipe=False))
+            ])
+        else:
+            pipe = Pipeline([
+                ('feature', features),
+                ('PCA', PCA(n_components=pca_components)),
+                ('index', Indexer(df_indexer, yield_pipe=False))
+            ])
+
     return pipe

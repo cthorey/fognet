@@ -7,7 +7,7 @@ from multiprocessing import cpu_count
 from utils.initialization import *
 from utils.data_utils import load_raw_data
 from utils.helper import myDict
-from utils import pipe_def
+from utils import pipe_def_arima
 
 fognet = os.path.join('~', 'Documents', 'project', 'competition', 'fognet')
 conf = {}
@@ -24,13 +24,15 @@ conf['continue_training'] = False
 
 # pipeline
 # Faire bien attention __ et pas _ pour les parametres
-conf['pipe'] = getattr(pipe_def, 'pipe0')
+conf['pipe'] = getattr(pipe_def_arima, 'pipe0')
+conf['pipe_yield'] = getattr(pipe_def_arima, 'pipe_yield')
 
 # Architecture
 conf['type_model'] = 'arima'
 conf['which_architecture'] = 'SARIMAX'
 
 # Hyperparameters
+conf['pca_components'] = 3
 conf['AR'] = 0
 conf['MA'] = 1
 conf['D'] = 1

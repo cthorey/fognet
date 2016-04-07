@@ -6,92 +6,9 @@ FOGNET -*- mode: org -*-
 Strategy for the competition fognet [[https://www.drivendata.org/competitions/9/]]
 Leaderboard : https://www.drivendata.org/competitions/9/leaderboard/
 
-* TODO 
+* TODO Implement avec PCA en premier pour voir si ca a de l'effet
+* TODO Implement random sampling feature space
+* TODO Try only with ARIMA, pas SARIMAX
+* TODO DOES SARIMAX perform the same if we input the nan with time interpolation ?
+* TODO VARMAX model avec micro data et x exodata
 
-* Complexifier the model
-* Model time series
-
-** TODO Look at the size of the sequences 
-** TODO [#A] Bien verrifier ce que sort les iterators 
-** TODO Verrifier que le net se comporte bien a test time dans nolearn_net ? determinitisc o what ?!
-** TODO Verrifier ce que sort le submission.txt
-** TODO On s'occupe pas du test set encore ? Pk ??
-** TODO Introduce a RELU non linearty in the net(threshold to zero)
-
-
-
-** DONE Problem after patien, no learn through an error.  
-   CLOSED: [2016-03-22 Tue 13:27]
-   Loading  weights from  a  list  of parameter  values  is no  longer
-   supported.  
-   Please   send    me   something   like   the    return   value   of
-   'net.get_all_params_values()' instead.
-   Looking into that
-
-** DONE normalize feature
-   CLOSED: [2016-03-19 Sat 10:20]
-
-
-
-DONE 
-** DONE Incorporer load_data ( name et feats et autre dans le config)
-   CLOSED: [2016-03-18 Fri 16:24]
-
-** DONE Construitre pe pred iterator sur le submission format, pas sur le testing (il y a des trou de dans qui doive passer dans )
-   CLOSED: [2016-03-18 Fri 17:44]
-** DONE Deal with the inputer stuff. Has to be train of training and use for  testing afterwards.
-   CLOSED: [2016-03-18 Fri 12:54]
-
-** DONE Tchequer si le model est bien capable de splitter si il ya  des diff de 4H au lieu de 2H !
-   CLOSED: [2016-03-18 Fri 12:00]
-** DONE Construct the predict finction
-   CLOSED: [2016-03-18 Fri 17:45]
-
-
-* Score
-
-Le yield est majoritairement nul ! Donc comme on prédit zero output,
-Il faut travaller pour donner plus de poids qd c != zero !!.
-
-
-* Sequence processing
-
-Use similar strategy than in the thano tuto LSTM. Use only the last time to predict.
-Sequence with different length
-Use more data (5 min) and use a mask to incorporate only meaningfull result into the loss.
-dheozhdieo [[http://orgmode.org/worg/org-tutorials/orgtutorial_dto.html]]
-
-* Prediciton test test
-
-** DONE Implement batch iterator for testing.
-   CLOSED: [2016-03-18 Fri 16:23]
-
-* To thinck about
-
-What to do when the size of the seq is smllaer than window nbseq<0
-
-* Regularization
-
-** TODO Incorporate dropout (https://github.com/JonathanRaiman/theano_lstm) or this paper (http://arxiv.org/abs/1409.2329)
-
-* What to do with missing values
-
-** TODO Fit time  series to each feature to interpolate missing values. Maybe use the 5-min data to do the task !
-
-* Theano tip
-
-https://roshansanthosh.wordpress.com/2015/02/22/linear-regression-in-theano/
-
-
-
-* Strategy to fit the time series
-
-- One can use ARMA model to fit each time seri independantl
-
-
-* Website to check
-
-http://www.analyticsvidhya.com/blog/2016/02/time-series-forecasting-codes-python/
-http://stackoverflow.com/questions/20841167/how-to-predict-time-series-in-scikit-learn
-http://stackoverflow.com/questions/31690134/python-statsmodels-help-using-arima-model-for-time-series
-http://danielnouri.org/notes/category/machine-learning/
