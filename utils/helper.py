@@ -1,5 +1,6 @@
 import os
 import json
+import numpy as np
 from time import strftime
 
 
@@ -61,3 +62,10 @@ def control_type_parameter_arima(parameters):
                           'Season_Period',
                           'pca_components']})
     return {key: dict_type[key](val) for key, val in parameters.iteritems()}
+
+
+def replace_nan(x):
+    if np.isnan(x):
+        return 1e5
+    else:
+        return x

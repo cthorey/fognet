@@ -103,3 +103,14 @@ class PlotTrainingHistory(object):
 
 def float32(x):
     return np.cast['float32'](x)
+
+
+class SaveArimaParameters(object):
+
+    def __init__(self, path, verbose=0):
+        self.path = os.path.expanduser(path)
+        self.verbose = verbose
+
+    def __call__(self, results):
+        with open(self.path, 'wb') as f:
+            pickle.dump(results, f, -1)

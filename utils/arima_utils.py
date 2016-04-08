@@ -7,7 +7,9 @@ from train_utils import BaseModel
 from preprocessing import *
 from data_utils import *
 from helper import *
+from hook import SaveArimaParameters
 
+import pickle
 import pprint
 from sklearn.metrics import mean_squared_error
 
@@ -17,6 +19,9 @@ class ArimaModel(BaseModel):
 
     def __init__(self, config, hp=['AR', 'D', 'MA'], mode='train'):
         super(ArimaModel, self).__init__(config=config, mode=mode, hp=hp)
+        self.init_data()
+        self.init_model(mode=mode)
+        self.init_parameter_saver()
 
     def init_data(self):
         ################################################################
@@ -42,9 +47,16 @@ class ArimaModel(BaseModel):
             df_indexer=self.df,
             pca_components=0)
         self.df = self.pipeline_yield.fit_transform(self.df)
-
         # Add a coolumn of zero for the prediction
         self.df['yield_pred'] = 0
+        self.dfgroup = self.df.groupby('group')
+        self.ngroups = self.dfgroup.ngroups
+
+    def init_parameter_saver(self):
+
+        for name in self.dfgroup.groups.keys():
+            setattr(self, 'save_' + name,
+                    SaveArimaParameters(getattr(self, 'model_f' + name)))
 
     def init_model(self, mode='train'):
 
@@ -55,8 +67,18 @@ class ArimaModel(BaseModel):
         if mode == 'train':
             print 'Set up the checkpoints'
             self.init_checkpoints()
+            for group in self.dfgroup.groups.keys():
+                path = os.path.join(self.folder, 'model_' + group + '.pkl')
+                setattr(self, 'model_f' + group, path)
 
-    def get_model(self, df, enforce_stationarity=True, enforce_invertibility=True):
+        if mode == 'inspection':
+            for name in self.dfgroup.groups.keys():
+                path = os.path.expanduser(getattr(self, 'model_f' + name))
+                print 'Loading model params for %s from %s' % (name, path)
+                with open(path) as f:
+                    setattr(self, 'model_' + name, pickle.load(f))
+
+    def get_model_architecture(self, df, enforce_stationarity=True, enforce_invertibility=True):
         if self.which_architecture == 'SARIMAX':
             return self.architecture(endog=df['feat_yield'],
                                      exog=df[self.regressors],
@@ -68,12 +90,6 @@ class ArimaModel(BaseModel):
             raise ValueError('%s is not implemented' %
                              (self.which_architecture))
 
-    def replace_nan(self, x):
-        if np.isnan(x):
-            return 1e5
-        else:
-            return x
-
     def is_there_some_nan_fit(self, fit_results):
         return any(np.isnan(np.array((fit_results.aic,
                                       fit_results.bic,
@@ -81,74 +97,36 @@ class ArimaModel(BaseModel):
                                       fit_results.nobs))))
 
     def get_information_fit(self, df, fit_results):
-        return map(self.replace_nan, (self.get_score(df),
-                                      fit_results.aic,
-                                      fit_results.bic,
-                                      fit_results.hqic,
-                                      fit_results.nobs))
+        return map(replace_nan, (self.get_rmse(df),
+                                 fit_results.aic,
+                                 fit_results.bic,
+                                 fit_results.hqic,
+                                 fit_results.nobs))
 
-    def merge_fitted_values(self, df, results):
+    def merge_fitted_values(self, df, fittedvalues):
         dffitted = pd.DataFrame(np.maximum(
-            0, results.fittedvalues), columns=['yield_pred'])
+            0, fittedvalues), columns=['yield_pred'])
         return df.join(dffitted, how='left', lsuffix='l')
 
-    def fit_group(self, df, disp=0, maxiter=100):
-        # traning
-        train, test = train_test_split(df)
-
+    def fit(self, name, df, disp=0, maxiter=100):
         try:
-            train_model = self.get_model(train)
-            train_results = train_model.fit(maxiter=maxiter, disp=disp)
-            if self.is_there_some_nan_fit(train_results):
+            df_model = self.get_model_architecture(df)
+            df_results = df_model.fit(maxiter=maxiter, disp=disp)
+            if self.is_there_some_nan_fit(df_results):
                 raise ValueError
             else:
                 if self.verbose > 1:
-                    print(train_results.summary())
+                    print(df_results.summary())
 
         except ValueError:
-            train_model = self.get_model(
-                train, enforce_stationarity=False, enforce_invertibility=False)
-            train_results = train_model.fit(maxiter=maxiter, disp=disp)
+            df_model = self.get_model_architecture(
+                df, enforce_stationarity=False, enforce_invertibility=False)
+            df_results = df_model.fit(maxiter=maxiter, disp=disp)
         except:
             print 'third try'
             raise ValueError()
-
-        train = self.merge_fitted_values(train, train_results)
-        train_score = self.get_information_fit(train, train_results)
-
-        # testing
-        test_model = self.get_model(test)
-        test_results = test_model.filter(train_results.params)
-        test = self.merge_fitted_values(test, test_results)
-        test_score = self.get_information_fit(test, test_results)
-
-        # Update the main dataframe
-        df_model = self.get_model(df)
-        results = df_model.filter(train_results.params).fittedvalues
-        dffitted = pd.DataFrame(results, columns=['yield_pred'])
-        self.df.loc[dffitted.index, 'yield_pred'] = np.maximum(
-            dffitted.yield_pred, 0)
-
-        return train_score, test_score
-
-    def fit(self):
-        train_score, test_score = [], []
-        dfgroup = self.df.groupby('group')
-        try:
-            for name, gp in dfgroup:
-                trains, tests = self.fit_group(gp)
-                train_score.append(trains)
-                test_score.append(tests)
-            self.make_submission(self.df)
-        except:
-            train_score = 1e5 * np.ones((1, 5))
-            test_score = 1e5 * np.ones((1, 5))
-            test_score[0] = 2
-
-        self.get_summary(train_score, split='train')
-        self.get_summary(test_score, split='test')
-
-        self.dump_final_config_file()
+        setattr(self, 'model_' + name, df_results)
+        getattr(self, 'save_' + name)(df_results)
 
     def iterative_fit(self, epsilon_threeshold):
         train_score, test_score = [], []
@@ -157,7 +135,7 @@ class ArimaModel(BaseModel):
         epsilon = 100
         while epsilon > epsilon_threeshold:
             for name, gp in dfgroup:
-                _, _ = self.fit_group(gp)
+                _, _ = self.fit_group(name, gp)
             old_value = self.df.feat_yield[np.isnan(self.df['yield'])].values
             new_value = self.df.yield_pred[np.isnan(self.df['yield'])].values
             epsilon = mean_squared_error(old_value, new_value)
@@ -169,6 +147,56 @@ class ArimaModel(BaseModel):
         # Once we have reach a good value for the parameters, we fit it !
         self.fit()
 
+    def get_model(self, name_group, df):
+        fitted_model = getattr(self, 'model_' + name_group)
+        model = self.get_model_architecture(df)
+        return model.filter(fitted_model.params)
+
+    def get_scores(self, name_group, df):
+        model = self.get_model(name_group, df)
+        df = self.merge_fitted_values(df, model.fittedvalues)
+        return self.get_information_fit(df, model)
+
+    def get_dfpred(self, name_group, df):
+        model = self.get_model(name_group, df)
+        return self.merge_fitted_values(df, model.fittedvalues)
+
+    def update_main_df(self, name_group, df):
+        model = self.get_model(name_group, df)
+        df = self.merge_fitted_values(df, model.fittedvalues)
+        self.df.loc[df.index, 'yield_pred'] = df.yield_pred.values
+
+    def predict(self):
+        train_score, test_score = [], []
+        for name, gp in self.dfgroup:
+            train, test = train_test_split(gp)
+            train_score.append(self.get_scores(name, train))
+            test_score.append(self.get_scores(name, test))
+            self.update_main_df(name, gp)
+
+        self.get_summary(train_score, split='train')
+        self.get_summary(test_score, split='test')
+
+    def train(self):
+        if self.mode != 'train':
+            raise ValueError('run in training mode : mode=train')
+
+        try:
+            for name, gp in self.dfgroup:
+                train, _ = train_test_split(gp)
+                # fit the model
+                self.fit(name, train)
+                # get the score
+
+            self.predict()
+        except:
+            train_score = 1e5 * np.ones((1, 5))
+            test_score = 1e5 * np.ones((1, 5))
+            test_score[0] = 2
+            self.get_summary(train_score, split='train')
+            self.get_summary(test_score, split='test')
+        self.dump_final_config_file()
+
     def get_summary(self, score, split='train'):
         print '%s summary:' % (split)
         score = np.mean(np.array(score), axis=0)
@@ -178,12 +206,15 @@ class ArimaModel(BaseModel):
             print('    %s : %1.3f' % (key, score[i]))
 
     def dump_final_config_file(self):
-        unwanted = ['df', 'architecture', 'pipeline', 'pipeline_yield']
+        unwanted = ['df', 'architecture',
+                    'pipeline', 'pipeline_yield', 'dfgroup']
+        unwanted += ['save_' + group for group in self.dfgroup.groups.keys()]
+        unwanted += ['model_' + group for group in self.dfgroup.groups.keys()]
         config = {k: v for k, v in props(
             self).iteritems() if k not in unwanted}
         dump_conf_file(config, os.path.expanduser(self.folder))
 
-    def get_score(self, df, against='yield_pred'):
+    def get_rmse(self, df, against='yield_pred'):
 
         df = df[['yield', against]].dropna()
         return np.sqrt(mean_squared_error(df['yield'], df['yield_pred']))

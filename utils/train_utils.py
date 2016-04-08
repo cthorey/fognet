@@ -13,9 +13,6 @@ class BaseModel(object):
             setattr(self, key, val)
         self.mode = mode
         self.hp = {f: config[f] for f in hp}
-        print(self.hp)
-        self.init_data()
-        self.init_model(mode=mode)
 
     def init_checkpoints(self):
         # Model checkpoints
