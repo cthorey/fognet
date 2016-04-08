@@ -25,8 +25,9 @@ def update_dict(config, new_parameters):
     return d  # return it ! Trust me , only way to get it done
 
 
-def conf_generator(config, parameters_grids):
+def conf_generator(config):
 
+    parameters_grid = config['parameters_grid']
     product = [x for x in apply(itertools.product, parameters_grid.values())]
     conf_runs = [dict(zip(parameters_grid.keys(), p)) for p in product]
     confs = map(lambda d: update_dict(config, d), conf_runs)
@@ -34,8 +35,9 @@ def conf_generator(config, parameters_grids):
     return confs
 
 
-def train_model(conf, hp):
-    model = ArimaModel(config=conf, mode='train', hp=hp)
+def train_model(conf):
+    model = ArimaModel(config=conf, mode='train',
+                       hp=conf['parameters_grid'].keys())
     model.fit()
 
 
@@ -86,17 +88,10 @@ if __name__ == '__main__':
             train_model_with_oscar(config, scientist, experiment)
 
     elif config['search_method'] == 'brut':
-        parameters_grid = {'AR': range(7),
-                           'D': [0, 1],
-                           'MA': range(7),
-                           'Season_RA': range(7),
-                           'Season_D': [0, 1],
-                           'Season_MA': range(7),
-                           'Season_Period': [0, 6, 12]}
-        confs = conf_generator(config, parameters_grid)
+        confs = conf_generator(config)
         print 'We are going to run %d different models' % (len(confs))
         for conf in tqdm(confs, total=len(confs)):
-            train_model(conf, parameters_grid.keys())
+            train_model(conf)
     else:
         raise ValueError()
 

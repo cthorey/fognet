@@ -42,18 +42,26 @@ conf['Season_D'] = 0
 conf['Season_Period'] = 0
 
 # Oscar stuff
-conf['parameters_def'] = {'AR': {'min': 0, 'max': 12, 'step': 1},
+conf['parameters_def'] = {'AR': {'min': 0, 'max': 6, 'step': 1},
                           'D': [0, 1, 2],
-                          'MA': {'min': 0, 'max': 12, 'step': 1}
+                          'MA': {'min': 0, 'max': 6, 'step': 1}
                           }
-# 'Season_AR': {'min': 0, 'max': 3, 'step': 1},
-# 'Season_D': [0, 1],
-# 'Season_MA': {'min': 0, 'max': 3, 'step': 1},
-# 'Season_Period': [1, 3]
 
-conf['experiment_name'] = 'ARIMAX - model_1 clavius - '
-conf[
-    'description'] = ' explore the orders parameters alone'
+# 'Season_AR': {'min': 0, 'max': 12, 'step': 1},
+# 'Season_D': [0, 1],
+# 'Season_MA': {'min': 0, 'max': 12, 'step': 1},
+# 'Season_Period': [1, 6, 12]
+
+conf['experiment_name'] = 'ARIMAX/model_0/clavius'
+description = 'Explore the parameters alone of the distribution' +\
+              'What is the best combination for the order parameters' +\
+              'of the ARIMAX model'
+conf['description'] = description
+
+# Brut force stuff
+conf['parameters_grid'] = {'AR': range(7),
+                           'D': [0, 1],
+                           'MA': range(7)}
 
 conf['verbose'] = 0
 # Initialization
