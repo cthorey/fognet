@@ -89,7 +89,8 @@ class ArimaModel(BaseModel):
                                       fit_results.nobs))
 
     def merge_fitted_values(self, df, results):
-        dffitted = pd.DataFrame(results.fittedvalues, columns=['yield_pred'])
+        dffitted = pd.DataFrame(np.maximum(
+            0, results.fittedvalues), columns=['yield_pred'])
         return df.join(dffitted, how='left', lsuffix='l')
 
     def fit_group(self, df):
@@ -108,7 +109,7 @@ class ArimaModel(BaseModel):
         except ValueError:
             train_model = self.get_model(
                 train, enforce_stationarity=False, enforce_invertibility=False)
-            train_results = train_model.fit(maxiter=100)
+            train_results = train_model.fit(maxiter=50)
         except:
             print 'third try'
             raise ValueError()
@@ -126,7 +127,8 @@ class ArimaModel(BaseModel):
         df_model = self.get_model(df)
         results = df_model.filter(train_results.params).fittedvalues
         dffitted = pd.DataFrame(results, columns=['yield_pred'])
-        self.df.loc[dffitted.index, 'yield_pred'] = dffitted.yield_pred
+        self.df.loc[dffitted.index, 'yield_pred'] = np.maximum(
+            dffitted.yield_pred, 0)
 
         return train_score, test_score
 
@@ -148,6 +150,25 @@ class ArimaModel(BaseModel):
         self.get_summary(test_score, split='test')
 
         self.dump_final_config_file()
+
+    def iterative_fit(self, epsilon_threeshold):
+        train_score, test_score = [], []
+        dfgroup = self.df.groupby('group')
+        k = 0
+        epsilon = 100
+        while epsilon > epsilon_threeshold:
+            for name, gp in tqdm(dfgroup, total=dfgroup.ngroups):
+                _, _ = self.fit_group(gp)
+            old_value = self.df.feat_yield[np.isnan(self.df['yield'])].values
+            new_value = self.df.yield_pred[np.isnan(self.df['yield'])].values
+            epsilon = mean_squared_error(old_value, new_value)
+            # update feat_yield
+            index = self.df.feat_yield[np.isnan(self.df['yield'])].index
+            self.df.loc[index, 'feat_yield'] = new_value
+            print('%d ieme iterations, error %2.3f' % (k, epsilon))
+            k += 1
+        # Once we have reach a good value for the parameters, we fit it !
+        self.fit()
 
     def get_summary(self, score, split='train'):
         print '%s summary:' % (split)
