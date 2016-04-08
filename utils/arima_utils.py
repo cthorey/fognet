@@ -93,13 +93,13 @@ class ArimaModel(BaseModel):
             0, results.fittedvalues), columns=['yield_pred'])
         return df.join(dffitted, how='left', lsuffix='l')
 
-    def fit_group(self, df, disp=0):
+    def fit_group(self, df, disp=0, maxiter=100):
         # traning
         train, test = train_test_split(df)
 
         try:
             train_model = self.get_model(train)
-            train_results = train_model.fit(maxiter=25, disp)
+            train_results = train_model.fit(maxiter, disp)
             if self.is_there_some_nan_fit(train_results):
                 raise ValueError
             else:
@@ -109,7 +109,7 @@ class ArimaModel(BaseModel):
         except ValueError:
             train_model = self.get_model(
                 train, enforce_stationarity=False, enforce_invertibility=False)
-            train_results = train_model.fit(maxiter=100, disp)
+            train_results = train_model.fit(maxiter, disp)
         except:
             print 'third try'
             raise ValueError()
