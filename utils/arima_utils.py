@@ -64,6 +64,10 @@ class ArimaModel(BaseModel):
         self.order = (self.AR, self.D, self.MA)
         self.seasonal_order = (
             self.Season_AR, self.Season_D, self.Season_MA, self.Season_Period)
+        print 'Order : '
+        print self.order
+        print 'Season order : '
+        print self.seasonal_order
         if mode == 'train':
             print 'Set up the checkpoints'
             self.init_checkpoints()
@@ -111,7 +115,7 @@ class ArimaModel(BaseModel):
     def fit(self, name, df, disp=0, maxiter=100):
         try:
             df_model = self.get_model_architecture(df)
-            df_results = df_model.fit(maxiter=maxiter, disp=disp)
+            df_results = df_model.fit(maxiter=maxiter, disp=disp, iprint=0)
             if self.is_there_some_nan_fit(df_results):
                 raise ValueError
             else:
@@ -121,7 +125,7 @@ class ArimaModel(BaseModel):
         except ValueError:
             df_model = self.get_model_architecture(
                 df, enforce_stationarity=False, enforce_invertibility=False)
-            df_results = df_model.fit(maxiter=maxiter, disp=disp)
+            df_results = df_model.fit(maxiter=maxiter, disp=disp, iprint=0)
         except:
             print 'third try'
             raise ValueError()
@@ -189,6 +193,7 @@ class ArimaModel(BaseModel):
                 # get the score
 
             self.predict()
+            self.make_submission(self.df)
         except:
             train_score = 1e5 * np.ones((1, 5))
             test_score = 1e5 * np.ones((1, 5))

@@ -38,7 +38,7 @@ def conf_generator(config):
 def train_model(conf):
     model = ArimaModel(config=conf, mode='train',
                        hp=conf['parameters_grid'].keys())
-    model.fit()
+    model.train()
 
 
 def train_model_with_oscar(conf, scientist, experiment):
@@ -49,7 +49,7 @@ def train_model_with_oscar(conf, scientist, experiment):
     parameters = control_type_parameter_arima(new_parameters)
     conf = update_dict(conf, parameters)
     model = ArimaModel(config=conf, mode='train', hp=parameters.keys())
-    model.fit()
+    model.train()
     if model.test_rmse > 3:
         loss = 3
     else:
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     elif config['search_method'] == 'brut':
         confs = conf_generator(config)
         print 'We are going to run %d different models' % (len(confs))
-        for conf in tqdm(confs, total=len(confs)):
+        for conf in confs:
             train_model(conf)
     else:
         raise ValueError()
