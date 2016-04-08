@@ -99,7 +99,7 @@ class ArimaModel(BaseModel):
 
         try:
             train_model = self.get_model(train)
-            train_results = train_model.fit(maxiter=100)
+            train_results = train_model.fit(maxiter=25)
             if self.is_there_some_nan_fit(train_results):
                 raise ValueError
             else:
@@ -109,7 +109,7 @@ class ArimaModel(BaseModel):
         except ValueError:
             train_model = self.get_model(
                 train, enforce_stationarity=False, enforce_invertibility=False)
-            train_results = train_model.fit(maxiter=50)
+            train_results = train_model.fit(maxiter=100)
         except:
             print 'third try'
             raise ValueError()

@@ -63,7 +63,7 @@ conf['parameters_grid'] = {'AR': range(7),
                            'Season_AR': range(7),
                            'Season_D': [0, 1],
                            'Season_MA': range(7),
-                           'Season_Period': [0, 6, 12]}
+                           'Season_Period': [1, 6, 12]}
 
 
 conf['verbose'] = 0

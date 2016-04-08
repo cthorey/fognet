@@ -35,8 +35,9 @@ def conf_generator(config):
     return confs
 
 
-def train_model(conf, hp):
-    model = ArimaModel(config=conf, mode='train', hp=hp)
+def train_model(conf):
+    model = ArimaModel(config=conf, mode='train',
+                       hp=conf['parameters_grid'].keys())
     model.fit()
 
 
@@ -90,7 +91,7 @@ if __name__ == '__main__':
         confs = conf_generator(config)
         print 'We are going to run %d different models' % (len(confs))
         for conf in tqdm(confs, total=len(confs)):
-            train_model(conf, parameters_grid.keys())
+            train_model(conf)
     else:
         raise ValueError()
 
