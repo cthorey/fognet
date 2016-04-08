@@ -56,6 +56,16 @@ conf['experiment_name'] = 'ARIMAX - model_2 bbking - '
 conf[
     'description'] = ' explore the orders parameters with seasonal effect'
 
+# Brut force stuff
+conf['parameters_grid'] = {'AR': range(7),
+                           'D': [0, 1],
+                           'MA': range(7),
+                           'Season_AR': range(7),
+                           'Season_D': [0, 1],
+                           'Season_MA': range(7),
+                           'Season_Period': [0, 6, 12]}
+
+
 conf['verbose'] = 0
 # Initialization
 conf['platform'], conf[
