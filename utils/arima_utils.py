@@ -1,7 +1,7 @@
 import os
 import statsmodels.api as sm
 from scipy.stats import normaltest
-import matplotlib.pylab as plt
+# import matplotlib.pylab as plt
 
 from train_utils import BaseModel
 from preprocessing import *
@@ -9,7 +9,6 @@ from data_utils import *
 from helper import *
 
 import pprint
-from tqdm import *
 from sklearn.metrics import mean_squared_error
 
 
@@ -93,13 +92,13 @@ class ArimaModel(BaseModel):
             0, results.fittedvalues), columns=['yield_pred'])
         return df.join(dffitted, how='left', lsuffix='l')
 
-    def fit_group(self, df):
+    def fit_group(self, df, disp=0, maxiter=100):
         # traning
         train, test = train_test_split(df)
 
         try:
             train_model = self.get_model(train)
-            train_results = train_model.fit(maxiter=25)
+            train_results = train_model.fit(maxiter=maxiter, disp=disp)
             if self.is_there_some_nan_fit(train_results):
                 raise ValueError
             else:
@@ -109,7 +108,7 @@ class ArimaModel(BaseModel):
         except ValueError:
             train_model = self.get_model(
                 train, enforce_stationarity=False, enforce_invertibility=False)
-            train_results = train_model.fit(maxiter=100)
+            train_results = train_model.fit(maxiter=maxiter, disp=disp)
         except:
             print 'third try'
             raise ValueError()
@@ -136,7 +135,7 @@ class ArimaModel(BaseModel):
         train_score, test_score = [], []
         dfgroup = self.df.groupby('group')
         try:
-            for name, gp in tqdm(dfgroup, total=dfgroup.ngroups):
+            for name, gp in dfgroup:
                 trains, tests = self.fit_group(gp)
                 train_score.append(trains)
                 test_score.append(tests)
@@ -157,7 +156,7 @@ class ArimaModel(BaseModel):
         k = 0
         epsilon = 100
         while epsilon > epsilon_threeshold:
-            for name, gp in tqdm(dfgroup, total=dfgroup.ngroups):
+            for name, gp in dfgroup:
                 _, _ = self.fit_group(gp)
             old_value = self.df.feat_yield[np.isnan(self.df['yield'])].values
             new_value = self.df.yield_pred[np.isnan(self.df['yield'])].values

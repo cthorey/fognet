@@ -22,11 +22,6 @@ conf['nb_cpus'] = 2
 conf['overwrite'] = True
 conf['continue_training'] = False
 
-# pipeline
-# Faire bien attention __ et pas _ pour les parametres
-conf['pipe'] = getattr(pipe_def_arima, 'pipe0')
-conf['pipe_yield'] = getattr(pipe_def_arima, 'pipe_yield')
-
 # Architecture
 conf['type_model'] = 'arima'
 conf['which_architecture'] = 'SARIMAX'
@@ -41,30 +36,36 @@ conf['Season_MA'] = 0
 conf['Season_D'] = 0
 conf['Season_Period'] = 0
 
+# pipeline
+# Faire bien attention __ et pas _ pour les parametres
+conf['pipe'] = getattr(pipe_def_arima, 'pipe1')
+conf['pipe_yield'] = getattr(pipe_def_arima, 'pipe_yield')
+
 # Oscar stuff
-conf['parameters_def'] = {'AR': {'min': 0, 'max': 6, 'step': 1},
+conf['parameters_def'] = {'AR': {'min': 0, 'max': 8, 'step': 1},
                           'D': [0, 1, 2],
-                          'MA': {'min': 0, 'max': 6, 'step': 1},
+                          'MA': {'min': 0, 'max': 8, 'step': 1},
                           'Season_AR': {'min': 0, 'max': 12, 'step': 1},
                           'Season_D': [0, 1],
                           'Season_MA': {'min': 0, 'max': 12, 'step': 1},
-                          'Season_Period': [1, 6, 12]
-                          }
+                          'Season_Period': [1, 6, 12]}
 
+# 'pca_components': {'min': 0, 'max': 30, 'step': 1}
+# 'Season_AR': {'min': 0, 'max': 12, 'step': 1},
+# 'Season_D': [0, 1],
+# 'Season_MA': {'min': 0, 'max': 12, 'step': 1},
+# 'Season_Period': [1, 6, 12]
 
-conf['experiment_name'] = 'ARIMAX - model_2 bbking - '
-conf[
-    'description'] = ' explore the orders parameters with seasonal effect'
+conf['experiment_name'] = 'SARIMAX/model_4/clavius'
+description = 'Explore the parameters alone of the distribution. ' +\
+              'What is the best combination for the order parameters' +\
+              'of the SARIMAX model-Seasonal effect. Data macro'
+conf['description'] = description
 
 # Brut force stuff
 conf['parameters_grid'] = {'AR': range(7),
                            'D': [0, 1],
-                           'MA': range(7),
-                           'Season_AR': range(7),
-                           'Season_D': [0, 1],
-                           'Season_MA': range(7),
-                           'Season_Period': [1, 6, 12]}
-
+                           'MA': range(7)}
 
 conf['verbose'] = 0
 # Initialization
