@@ -6,6 +6,17 @@ from sklearn.decomposition import PCA
 import pandas as pd
 import numpy as np
 
+# TSa
+import statsmodels.api as sm
+
+
+# R stuff
+import rpy2.robjects as robj
+from rpy2.robjects.packages import importr
+from rpy2.robjects import pandas2ri
+import rpy2.robjects.numpy2ri as rpyn
+pandas2ri.activate()
+rforecast = importr('forecast')
 # Possible processing object
 
 
@@ -35,6 +46,46 @@ class NumericFeatureSelector(TransformerMixin, BaseEstimator):
 
     def transform(self, X):
         return X.select_dtypes(include=[np.number])
+
+    def fit(self, X, y=None):
+        return self
+
+
+class RemoveZeroValues(TransformerMixin, BaseEstimator):
+
+    def transform(self, X):
+        return X.replace(0, np.nan)
+
+    def fit(self, X, y=None):
+        return self
+
+
+class AutoArimaInputer(TransformerMixin, BaseEstimator):
+
+    def transform(self, X):
+        array = np.array(X)
+        bestfit = np.apply_along_axis(self.fit_best_ARIMA, axis=0, arr=array)
+        return bestfit
+
+    def fit(self, X, y=None):
+        return self
+
+    def fit_best_ARIMA(self, x):
+        robj.globalenv['x'] = x
+        robj.r('y<-x')
+        robj.r('fit <- auto.arima(x)')
+        robj.r('kr <- KalmanRun(x, fit$model)')
+        robj.r('id.na <- which(is.na(x))')
+        robj.r('for (i in id.na) y[i] <- fit$model$Z %*% kr$states[i,]')
+        return rpyn.ri2py(robj.r['y'])
+
+
+class VARMAXStabilizer(TransformerMixin, BaseEstimator):
+
+    def transform(self, X):
+        model = sm.tsa.VARMAX(X)
+        res = model.fit()
+        return res.fittedvalues
 
     def fit(self, X, y=None):
         return self

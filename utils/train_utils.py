@@ -6,13 +6,14 @@ from data_utils import *
 class BaseModel(object):
     ''' class to handle ARIMA model '''
 
-    def __init__(self, config, mode='train', hp=['']):
+    def __init__(self, config, mode='train', hp=[''], verbose=1):
         assert mode in ['train', 'inspection']
         self.conf = config
         for key, val in config.iteritems():
             setattr(self, key, val)
         self.mode = mode
         self.hp = {f: config[f] for f in hp}
+        self.verbose = verbose
 
     def init_checkpoints(self):
         # Model checkpoints
