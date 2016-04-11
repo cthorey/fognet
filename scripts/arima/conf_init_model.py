@@ -52,11 +52,11 @@ conf['parameters_def'] = {'AR': {'min': 0, 'max': 8, 'step': 1},
 # 'Season_MA': {'min': 0, 'max': 12, 'step': 1},
 # 'Season_Period': [1, 6, 12]
 
-conf['experiment_name'] = 'ARIMAX/model_4/ray-micro-autoarima'
+conf['experiment_name'] = 'ARIMAX/model_5/ray-micro-autoarima'
 description = 'Explore the parameters of the distribution. ' +\
               'What is the best combination for the order parameters' +\
               'of the ARIMAX. Data micro- missing values input ' +\
-              'with auto.arima function '
+              'with auto.arima function+clean bad data '
 conf['description'] = description
 
 # Brut force stuff
