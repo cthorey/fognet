@@ -2,6 +2,7 @@ import platform
 import os
 import json
 from helper import *
+import pipe_def_arima
 
 
 def get_platform_and_create_folder(fognet):
@@ -59,3 +60,44 @@ def get_model_name(path):
     else:
         model = max([int(f.split('_')[1]) for f in existing_models])
     return 'model_' + str(model + 1)
+
+base_conf = {'nb_cpus': 2,
+             'overwrite': True,
+             'continue_training': False,
+             'type_model': 'arima',
+             'which_architecture': 'SARIMAX',
+             'pca_components': 0,
+             'AR': 0,
+             'MA': 1,
+             'D': 1,
+             'Season_AR': 0,
+             'Season_MA': 0,
+             'Season_D': 0,
+             'Season_Period': 0,
+             'pipe': getattr(pipe_def_arima, 'pipe1'),
+             'pipe_yield': getattr(pipe_def_arima, 'pipe_yield'),
+             'parameters_def': {'AR': {'min': 0, 'max': 8, 'step': 1},
+                                'D': [0, 1, 2],
+                                'MA': {'min': 0, 'max': 8, 'step': 1},
+                                'Season_AR': {'min': 0, 'max': 12, 'step': 1},
+                                'Season_D': [0, 1],
+                                'Season_MA': {'min': 0, 'max': 12, 'step': 1},
+                                'Season_Period': [1, 6, 12]},
+             'experiment_name': 'SARIMAX/model_4/clavius',
+             'description': 'Explore the parameters alone of the distribution. ' +
+             'What is the best combination for the order parameters' +
+             'of the SARIMAX model-Seasonal effect. Data macro',
+             'parameters_grid': {'AR': range(7),
+                                 'D': [0, 1],
+                                 'MA': range(7)},
+             'verbose': 0}
+
+
+def build_conf(fognet, **kwargs):
+    conf = base_conf
+    conf.update(kwargs)
+    # Initialization
+    conf['platform'], conf[
+        'access_token_oscar'] = get_platform_and_create_folder(fognet)
+    initialize_work_tree(fognet, conf)
+    return conf
