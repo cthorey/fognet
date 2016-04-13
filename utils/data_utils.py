@@ -181,7 +181,7 @@ def train_val_test_split(df):
     return train, val, test
 
 
-def train_test_split(df):
+def train_test_split(df, verbose=1):
     ''' Return a train/val/test split of the data for training '''
 
     df = add_group_column_to_data(df)
@@ -195,10 +195,11 @@ def train_test_split(df):
 
     train = reduce(lambda a, b: a.append(b), train)
     test = reduce(lambda a, b: a.append(b), test)
-    print('Le train is composed by %d group and %d observation' %
-          (train.groupby('group').ngroups, len(train)))
-    print('Le test is composed by %d group and %d observation' %
-          (test.groupby('group').ngroups, len(test)))
+    if verbose > 0:
+        print('Le train is composed by %d group and %d observation' %
+              (train.groupby('group').ngroups, len(train)))
+        print('Le test is composed by %d group and %d observation' %
+              (test.groupby('group').ngroups, len(test)))
 
     return train, test
 

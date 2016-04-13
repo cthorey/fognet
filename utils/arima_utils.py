@@ -17,8 +17,9 @@ from sklearn.metrics import mean_squared_error
 class ArimaModel(BaseModel):
     ''' class to handle ARIMA model '''
 
-    def __init__(self, config, hp=['AR', 'D', 'MA'], mode='train'):
-        super(ArimaModel, self).__init__(config=config, mode=mode, hp=hp)
+    def __init__(self, config, hp=['AR', 'D', 'MA'], mode='train', verbose=1):
+        super(ArimaModel, self).__init__(
+            config, mode=mode, hp=hp, verbose=verbose)
         self.init_data()
         self.init_model(mode=mode)
         self.init_parameter_saver()
@@ -26,7 +27,8 @@ class ArimaModel(BaseModel):
     def init_data(self):
         ################################################################
         # Load the preprocessing
-        print 'Loading the prepro pipeline'
+        if self.verbose > 0:
+            print 'Loading the prepro pipeline'
         # pprint.pprint(self.pipe)
         df = add_group_column_to_data(build_dataset())
 
@@ -64,10 +66,11 @@ class ArimaModel(BaseModel):
         self.order = (self.AR, self.D, self.MA)
         self.seasonal_order = (
             self.Season_AR, self.Season_D, self.Season_MA, self.Season_Period)
-        print 'Order : '
-        print self.order
-        print 'Season order : '
-        print self.seasonal_order
+        if self.verbose > 0:
+            print 'Order : '
+            print self.order
+            print 'Season order : '
+            print self.seasonal_order
         if mode == 'train':
             print 'Set up the checkpoints'
             self.init_checkpoints()
@@ -78,7 +81,8 @@ class ArimaModel(BaseModel):
         if mode == 'inspection':
             for name in self.dfgroup.groups.keys():
                 path = os.path.expanduser(getattr(self, 'model_f' + name))
-                print 'Loading model params for %s from %s' % (name, path)
+                if self.verbose > 0:
+                    print 'Loading model params for %s from %s' % (name, path)
                 with open(path) as f:
                     setattr(self, 'model_' + name, pickle.load(f))
 
@@ -115,7 +119,7 @@ class ArimaModel(BaseModel):
     def fit(self, name, df, disp=0, maxiter=100):
         try:
             df_model = self.get_model_architecture(df)
-            df_results = df_model.fit(maxiter=maxiter, disp=disp, iprint=0)
+            df_results = df_model.fit(maxiter=maxiter, disp=0, iprint=0)
             if self.is_there_some_nan_fit(df_results):
                 raise ValueError
             else:
@@ -125,7 +129,7 @@ class ArimaModel(BaseModel):
         except ValueError:
             df_model = self.get_model_architecture(
                 df, enforce_stationarity=False, enforce_invertibility=False)
-            df_results = df_model.fit(maxiter=maxiter, disp=disp, iprint=0)
+            df_results = df_model.fit(maxiter=maxiter, disp=0, iprint=0)
         except:
             print 'third try'
             raise ValueError()
@@ -173,7 +177,7 @@ class ArimaModel(BaseModel):
     def predict(self):
         train_score, test_score = [], []
         for name, gp in self.dfgroup:
-            train, test = train_test_split(gp)
+            train, test = train_test_split(gp, verbose=self.verbose)
             train_score.append(self.get_scores(name, train))
             test_score.append(self.get_scores(name, test))
             self.update_main_df(name, gp)
@@ -203,12 +207,14 @@ class ArimaModel(BaseModel):
         self.dump_final_config_file()
 
     def get_summary(self, score, split='train'):
-        print '%s summary:' % (split)
+        if self.verbose > 0:
+            print '%s summary:' % (split)
         score = np.mean(np.array(score), axis=0)
         score_key = ['rmse', 'aic', 'bic', 'hqic']
         for i, key in enumerate(score_key):
             setattr(self, split + '_' + key, score[i])
-            print('    %s : %1.3f' % (key, score[i]))
+            if self.verbose > 0:
+                print('    %s : %1.3f' % (key, score[i]))
 
     def dump_final_config_file(self):
         unwanted = ['df', 'architecture',

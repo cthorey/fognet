@@ -21,14 +21,18 @@ pipe_list_macro = ['FeatureSelector',
                    'FillRemainingNaN',
                    'MyStandardScaler']
 
-pipe_yield = ['FeatureSelector',
-              'MissingValueInputer',
-              'FillRemainingNaN']
+pipe_list_yield_base = ['FeatureSelector']
+pipe_list_yield = pipe_list_yield_base + \
+    ['MissingValueInputer', 'FillRemainingNaN']
+
 
 ############################
 # kwargs_list_brick
 kwargs_micro = base_kwargs.copy()
 kwargs_micro.update({'FeatureSelector__features': data['micro_feats'].keys()})
+
+kwargs_yield_base = {'FeatureSelector__features': ['yield']}
+
 
 kwargs_yield = base_kwargs.copy()
 kwargs_yield.update({'FeatureSelector__features': ['yield']})
@@ -60,13 +64,49 @@ pipe = Pipe()
 
 ############################
 # building the pipes for the output
-pipe_list = {'yield': pipe_yield}
+pipe_list = {'yield': pipe_list_yield_base}
+pipe_kwargs = {'yield': kwargs_yield_base}
+pipe_yield_base = pipe(pipe_list, pipe_kwargs)
+
+pipe_list = {'yield': pipe_list_yield}
 pipe_kwargs = {'yield': kwargs_yield}
 pipe_yield = pipe(pipe_list, pipe_kwargs)
 
 
 ############################
 # building the pipes for features
+
+############################
+# pipe_micro_auto_input_arima
+pipe_list_maia = ['FeatureSelector',
+                  'AutoArimaInputer',
+                  'MyStandardScaler']
+kwargs_maia = {'FeatureSelector__features': data['micro_feats'].keys()}
+pipe_list = {'maia': pipe_list_maia}
+pipe_kwargs = {'maia': kwargs_maia}
+pipe_maia = pipe(pipe_list, pipe_kwargs)
+
+############################
+# pipe_maia improved
+pipe_list1 = ['FeatureSelector',
+              'RemoveZeroValues',
+              'AutoArimaInputer',
+              'MyStandardScaler']
+kwargs_list1 = {'FeatureSelector__features': ['humidity', 'temp']}
+
+pipe_list2 = ['FeatureSelector',
+              'AutoArimaInputer',
+              'MyStandardScaler']
+list_feats = [f for f in data['micro_feats'].keys() if f not in [
+    'humidity', 'temp', 'leafwet460_min']]
+kwargs_list2 = {'FeatureSelector__features': list_feats}
+
+pipe_list = {'part1': pipe_list1,
+             'part2': pipe_list2}
+pipe_kwargs = {'part1': kwargs_list1,
+               'part2': kwargs_list2}
+pipe_maia_V2 = pipe(pipe_list, pipe_kwargs)
+
 
 ############################
 # pipe0

@@ -13,7 +13,7 @@ def get_platform_and_create_folder(fognet):
         # laptop ur mon bureau
     elif platform.uname()[1] == 'clavius.step.univ-paris-diderot.fr':
         name_platform = 'clavius'
-    elif platform.uname()[1] == 'Thoreys-MBP':
+    elif platform.uname()[1] in ['Thoreys-MBP', 'Thoreys-MacBook-Pro.local']:
         name_platform = 'ray'
     else:
         raise SystemExit('Platform unknown !')

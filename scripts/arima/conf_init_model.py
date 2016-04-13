@@ -9,6 +9,7 @@ from utils.data_utils import load_raw_data
 from utils.helper import myDict
 from utils import pipe_def_arima
 
+
 conf = {'nb_cpus': 2,
         'type_model': 'arima',
         'which_architecture': 'SARIMAX',
