@@ -6,6 +6,8 @@ from sklearn.decomposition import PCA
 import pandas as pd
 import numpy as np
 
+from data_utils import add_group_column_to_data
+
 # TSa
 import statsmodels.api as sm
 
@@ -60,24 +62,67 @@ class RemoveZeroValues(TransformerMixin, BaseEstimator):
         return self
 
 
+class DiffTransformer(TransformerMixin, BaseEstimator):
+
+    def transform(self, X):
+        return X.diff(periods=1)
+
+    def fit(self, X, y=None):
+        return self
+
+
 class AutoArimaInputer(TransformerMixin, BaseEstimator):
 
     def transform(self, X):
-        array = np.array(X)
-        bestfit = np.apply_along_axis(self.fit_best_ARIMA, axis=0, arr=array)
-        return bestfit
+        X = add_group_column_to_data(pd.DataFrame(X))
+        bestfits = []
+        for i, (name, gp) in enumerate(X.groupby('group')):
+            gp_tmp = gp.drop('group', axis=1)
+            array = np.array(gp_tmp)
+            bestfit = np.apply_along_axis(
+                self.fit_best_ARIMA, axis=0, arr=array)
+            assert bestfit.shape == array.shape
+            print bestfit.shape
+            bestfits.append(bestfit)
+        return reduce(lambda x, y: np.vstack((x, y)), bestfits)
 
     def fit(self, X, y=None):
         return self
 
     def fit_best_ARIMA(self, x):
+        'Kalman smoother do slightly better'
         robj.globalenv['x'] = x
         robj.r('y<-x')
         robj.r('fit <- auto.arima(x)')
-        robj.r('kr <- KalmanRun(x, fit$model)')
+        #robj.r('kr <- KalmanRun(x, fit$model)')
+        robj.r('kr <- KalmanSmooth(x, fit$model)')
         robj.r('id.na <- which(is.na(x))')
-        robj.r('for (i in id.na) y[i] <- fit$model$Z %*% kr$states[i,]')
+        #robj.r('for (i in id.na) y[i] <- fit$model$Z %*% kr$states[i,]')
+        robj.r('for (i in id.na) y[i] <- fit$model$Z %*% kr$smooth[i,]')
         return rpyn.ri2py(robj.r['y'])
+
+    def fit_best_ARIMA2(self, x):
+        robj.globalenv['x'] = x
+        robj.r('y<-x')
+        robj.r('fit <- auto.arima(x)')
+        robj.r('arma <- fit$arma')
+        arma = rpyn.ri2py(robj.r['arma'])
+        AR, MA, S_AR, S_MA, P, D, S_D = map(int, arma)
+        try:
+            m = sm.tsa.SARIMAX(endog=x, order=(AR, D, MA),
+                               seasonal_order=(S_AR, S_D, S_MA, P))
+            res = m.fit(disp=0, iprint=0)
+            output = res.fittedvalues
+            print m.order, m.seasonal_order
+        except ValueError:
+            m = sm.tsa.SARIMAX(endog=x, order=(
+                1, 0, 0), enforce_stationarity=False, enforce_invertibility=False)
+            res = m.fit(disp=0, iprint=0)
+            output = res.fittedvalues
+            print m.order, m.seasonal_order
+        except ValueError:
+            output = x
+        return output
 
 
 class VARMAXStabilizer(TransformerMixin, BaseEstimator):
@@ -103,16 +148,53 @@ class MissingValueInputer(TransformerMixin, BaseEstimator):
         return self
 
 
+class CreateLagArrays(TransformerMixin, BaseEstimator):
+    ''' Create lag arrays -
+    params: 
+    lags - number of lag vector to incorporate for each feature
+    if lags =3, then 0,1,2 lags  !'''
+
+    def __init__(self, lags=3, pad_values=np.nan):
+        self.lags = lags
+        self.pad_values = pad_values
+
+    def transform(self, X):
+        X = np.array(X)
+        if len(X.shape) == 1:
+            X = X[:, np.newaxis]
+        nb_dim = X.shape[1]
+        transform_array = []
+        for i in range(nb_dim):
+            transform_array.append(self.return_lags_for_one_vector(X[:, i]))
+        return reduce(lambda x, y: np.vstack((x, y)), transform_array).T
+
+    def return_lags_for_one_vector(self, x):
+        ''' Get one dimensional vector and return 
+        an array of lag vectors '''
+
+        assert len(x.shape) == 1
+        lag_vectors = []
+        dim = x.shape[0]
+        for n in range(self.lags):
+            lag_vectors.append(np.pad(x, pad_width=(
+                n, 0), mode='constant', constant_values=self.pad_values)[:dim])
+        return reduce(lambda x, y: np.vstack((x, y)), lag_vectors)
+
+    def fit(self, X, y=None):
+        return self
+
+
 class FillRemainingNaN(TransformerMixin, BaseEstimator):
 
     def __init__(self, method='bfill'):
         self.method = method
 
     def transform(self, X):
-        Xnew = X.fillna(method=self.method)
+        df = pd.DataFrame(X)
+        Xnew = df.fillna(method=self.method)
         # make sur there is no more NaN in there !
-        assert len(Xnew.dropna()) == len(Xnew)
-        return Xnew
+        assert len(Xnew.dropna()) == len(df)
+        return np.array(Xnew)
 
     def fit(self, X, y=None):
         return self

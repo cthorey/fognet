@@ -8,6 +8,7 @@ from preprocessing import *
 from data_utils import *
 from helper import *
 from hook import SaveArimaParameters
+from split_method import *
 
 import pickle
 import pprint
@@ -17,7 +18,11 @@ from sklearn.metrics import mean_squared_error
 class ArimaModel(BaseModel):
     ''' class to handle ARIMA model '''
 
-    def __init__(self, config, hp=['AR', 'D', 'MA'], mode='train', verbose=1):
+    def __init__(self, config, hp=['AR', 'D', 'MA'], mode='train', verbose=1, **kwargs):
+        if not all(map(lambda x: x in config.keys(), kwargs.keys())):
+            raise ValueError()
+        else:
+            config.update(kwargs)
         super(ArimaModel, self).__init__(
             config, mode=mode, hp=hp, verbose=verbose)
         self.init_data()
@@ -136,14 +141,11 @@ class ArimaModel(BaseModel):
         setattr(self, 'model_' + name, df_results)
         getattr(self, 'save_' + name)(df_results)
 
-    def iterative_fit(self, epsilon_threeshold):
-        train_score, test_score = [], []
-        dfgroup = self.df.groupby('group')
+    def iterative_fit(self, name, df, epsilon_threeshold):
         k = 0
         epsilon = 100
         while epsilon > epsilon_threeshold:
-            for name, gp in dfgroup:
-                _, _ = self.fit_group(name, gp)
+
             old_value = self.df.feat_yield[np.isnan(self.df['yield'])].values
             new_value = self.df.yield_pred[np.isnan(self.df['yield'])].values
             epsilon = mean_squared_error(old_value, new_value)
@@ -177,7 +179,7 @@ class ArimaModel(BaseModel):
     def predict(self):
         train_score, test_score = [], []
         for name, gp in self.dfgroup:
-            train, test = train_test_split(gp, verbose=self.verbose)
+            train, test = train_test_split_rand_yield(gp, verbose=self.verbose)
             train_score.append(self.get_scores(name, train))
             test_score.append(self.get_scores(name, test))
             self.update_main_df(name, gp)
@@ -191,7 +193,7 @@ class ArimaModel(BaseModel):
 
         try:
             for name, gp in self.dfgroup:
-                train, _ = train_test_split(gp)
+                train, _ = train_test_split_rand_yield(gp)
                 # fit the model
                 self.fit(name, train)
                 # get the score

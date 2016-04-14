@@ -3,6 +3,7 @@ import numpy as np
 from iterator import BaseBatchIterator
 import os
 from os.path import expanduser
+import split_method
 home = expanduser("~")
 fognet = os.path.join(home, 'Documents', 'project', 'competition', 'fognet')
 
@@ -181,18 +182,14 @@ def train_val_test_split(df):
     return train, val, test
 
 
-def train_test_split(df, verbose=1):
-    ''' Return a train/val/test split of the data for training '''
-
-    df = add_group_column_to_data(df)
-    n = df.groupby('group').ngroups
-
+def train_test_split(df, method='train_test_split_rand_yield', seed=5, verbose=1, nb_gaps=7):
     train = []
     test = []
     for name, gp in df.groupby('group'):
-        train.append(gp.iloc[:int(len(gp) * 0.75)])
-        test.append(gp.iloc[int(len(gp) * 0.75):])
-
+        train_tmp, test_tmp = getattr(
+            split_method, method)(gp, seed, verbose=0)
+        train.append(train_tmp)
+        test.append(test_tmp)
     train = reduce(lambda a, b: a.append(b), train)
     test = reduce(lambda a, b: a.append(b), test)
     if verbose > 0:
