@@ -94,11 +94,11 @@ class AutoArimaInputer(TransformerMixin, BaseEstimator):
         robj.globalenv['x'] = x
         robj.r('y<-x')
         robj.r('fit <- auto.arima(x)')
-        #robj.r('kr <- KalmanRun(x, fit$model)')
-        robj.r('kr <- KalmanSmooth(x, fit$model)')
+        robj.r('kr <- KalmanRun(x, fit$model)')
+        #robj.r('kr <- KalmanSmooth(x, fit$model)')
         robj.r('id.na <- which(is.na(x))')
-        #robj.r('for (i in id.na) y[i] <- fit$model$Z %*% kr$states[i,]')
-        robj.r('for (i in id.na) y[i] <- fit$model$Z %*% kr$smooth[i,]')
+        robj.r('for (i in id.na) y[i] <- fit$model$Z %*% kr$states[i,]')
+        #robj.r('for (i in id.na) y[i] <- fit$model$Z %*% kr$smooth[i,]')
         return rpyn.ri2py(robj.r['y'])
 
     def fit_best_ARIMA2(self, x):
@@ -136,7 +136,7 @@ class VARMAXStabilizer(TransformerMixin, BaseEstimator):
         return self
 
 
-class MissingValueInputer(TransformerMixin, BaseEstimator):
+class InterpolateMissingValueInputer(TransformerMixin, BaseEstimator):
 
     def __init__(self, method='time'):
         self.method = method
@@ -148,23 +148,39 @@ class MissingValueInputer(TransformerMixin, BaseEstimator):
         return self
 
 
+class EWMAMissingValueInputer(TransformerMixin, BaseEstimator):
+
+    def __init__(self, span=24, noise=False):
+        self.span = span
+        self.noise = noise
+
+    def transform(self, X):
+        return pd.DataFrame(X).fillna(self.ewma)
+
+    def fit(self, X, y=None):
+        self.ewma = pd.ewma(pd.DataFrame(X), span=self.span)
+        return self
+
+
 class CreateLagArrays(TransformerMixin, BaseEstimator):
     ''' Create lag arrays -
     params: 
     lags - number of lag vector to incorporate for each feature
     if lags =3, then 0,1,2 lags  !'''
 
-    def __init__(self, lags=3, pad_values=np.nan):
+    def __init__(self, lags=3, inter_lags=1, pad_values=np.nan):
         self.lags = lags
         self.pad_values = pad_values
+        self.inter_lags = inter_lags
 
     def transform(self, X):
         X = np.array(X)
+        print len(X.shape)
         if len(X.shape) == 1:
             X = X[:, np.newaxis]
         nb_dim = X.shape[1]
         transform_array = []
-        for i in range(nb_dim):
+        for i in range(0, nb_dim):
             transform_array.append(self.return_lags_for_one_vector(X[:, i]))
         return reduce(lambda x, y: np.vstack((x, y)), transform_array).T
 
@@ -175,7 +191,7 @@ class CreateLagArrays(TransformerMixin, BaseEstimator):
         assert len(x.shape) == 1
         lag_vectors = []
         dim = x.shape[0]
-        for n in range(self.lags):
+        for n in range(0, self.lags, self.inter_lags):
             lag_vectors.append(np.pad(x, pad_width=(
                 n, 0), mode='constant', constant_values=self.pad_values)[:dim])
         return reduce(lambda x, y: np.vstack((x, y)), lag_vectors)
