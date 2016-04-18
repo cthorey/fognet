@@ -42,14 +42,14 @@ def train_test_split_rand_yield(df, seed=91, nb_gaps=7, verbose=1):
 def train_test_split_rand(df, seed=103, verbose=1):
     ''' Return a train/val/test split of the data for training '''
 
-    idx = np.arange(len(gp))
-    dates = pd.date_range(gp.index.min(), gp.index.max(), freq='2H')
+    idx = np.arange(len(df))
+    dates = pd.date_range(df.index.min(), df.index.max(), freq='2H')
     idx_train = np.sort(randgen.choice(
         idx, size=int(len(idx) * split), replace=False))
     mask = np.in1d(idx, idx_train)
     idx_test = np.sort(idx[~mask])
-    train = gp.iloc[idx_train]
-    test = gp.iloc[idx_test]
+    train = df.iloc[idx_train]
+    test = df.iloc[idx_test]
 
     if verbose > 0:
         print('Le train is composed by %d observation' %
@@ -62,8 +62,8 @@ def train_test_split_rand(df, seed=103, verbose=1):
 def train_test_split_base(df, verbose=1):
     ''' Return a train/val/test split of the data for training '''
 
-    train = df.iloc[:int(len(gp) * 0.75)]
-    test = df.iloc[int(len(gp) * 0.75):]
+    train = df.iloc[:int(len(df) * 0.75)]
+    test = df.iloc[int(len(df) * 0.75):]
 
     if verbose > 0:
         print('Le train is composed by %d observation' %
