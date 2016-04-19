@@ -179,7 +179,7 @@ class ArimaModel(BaseModel):
     def predict(self):
         train_score, test_score = [], []
         for name, gp in self.dfgroup:
-            train, test = train_test_split_base(gp, verbose=self.verbose)
+            train, test = train_test_split_rand_yield(gp, verbose=self.verbose)
             train_score.append(self.get_scores(name, train))
             test_score.append(self.get_scores(name, test))
             self.update_main_df(name, gp)
@@ -193,7 +193,7 @@ class ArimaModel(BaseModel):
 
         try:
             for name, gp in self.dfgroup:
-                train, _ = train_test_split_base(gp)
+                train, _ = train_test_split_rand_yield(gp)
                 # fit the model
                 self.fit(name, train)
                 # get the score
