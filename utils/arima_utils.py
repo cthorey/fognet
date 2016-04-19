@@ -9,7 +9,7 @@ from data_utils import *
 from helper import *
 from hook import SaveArimaParameters
 from split_method import *
-
+from tqdm import *
 import pickle
 import pprint
 from sklearn.metrics import mean_squared_error
@@ -109,13 +109,6 @@ class ArimaModel(BaseModel):
                                       fit_results.hqic,
                                       fit_results.nobs))))
 
-    def get_information_fit(self, df, fit_results):
-        return map(replace_nan, (self.get_rmse(df),
-                                 fit_results.aic,
-                                 fit_results.bic,
-                                 fit_results.hqic,
-                                 fit_results.nobs))
-
     def merge_fitted_values(self, df, fittedvalues):
         dffitted = pd.DataFrame(np.maximum(
             0, fittedvalues), columns=['yield_pred'])
@@ -138,8 +131,14 @@ class ArimaModel(BaseModel):
         except:
             print 'third try'
             raise ValueError()
-        setattr(self, 'model_' + name, df_results)
+
+        return df_results
+
+    def save_model_params(self, name, df_results):
         getattr(self, 'save_' + name)(df_results)
+
+    def load_model_params(self, name, df_results):
+        setattr(self, 'model_' + name, df_results)
 
     def iterative_fit(self, name, df, epsilon_threeshold):
         k = 0
@@ -157,8 +156,7 @@ class ArimaModel(BaseModel):
         # Once we have reach a good value for the parameters, we fit it !
         self.fit()
 
-    def get_model(self, name_group, df):
-        fitted_model = getattr(self, 'model_' + name_group)
+    def get_model(self, df, fitted_model):
         model = self.get_model_architecture(df)
         return model.filter(fitted_model.params)
 
@@ -171,9 +169,8 @@ class ArimaModel(BaseModel):
         model = self.get_model(name_group, df)
         return self.merge_fitted_values(df, model.fittedvalues)
 
-    def update_main_df(self, name_group, df):
-        model = self.get_model(name_group, df)
-        df = self.merge_fitted_values(df, model.fittedvalues)
+    def update_main_df(self, df, fitted_model):
+        df = self.merge_fitted_values(df, fitted_model.fittedvalues)
         self.df.loc[df.index, 'yield_pred'] = df.yield_pred.values
 
     def predict(self):
@@ -187,6 +184,60 @@ class ArimaModel(BaseModel):
         self.get_summary(train_score, split='train')
         self.get_summary(test_score, split='test')
 
+    def get_information_fit(self, df, fit_results):
+        return map(replace_nan, (self.get_rmse(df),
+                                 fit_results.aic,
+                                 fit_results.bic,
+                                 fit_results.hqic,
+                                 fit_results.nobs))
+
+    def train_CV(self, nb_fold=5, size_gap=96, seed=91):
+        if self.mode != 'train':
+            raise ValueError('run in training mode : mode=train')
+        randgen = np.random.RandomState(seed)
+        train_score = []
+        test_score = []
+        for name, gp in self.dfgroup:
+            n = len(gp)
+            # idx = range(init_len, len(gp), gap) + [len(gp)]  # Grid for the
+            # CV
+            idx = np.array(range(96 * 2, n))
+            mask = np.array(gp.iloc[96 * 2:n]['yield'].apply(np.isnan))
+            possible_values = idx[~mask]  # idx where yield is not nan
+            # possible_values = range(len(gp) - 2 * size_gap)
+            idx = list(np.sort(randgen.choice(
+                possible_values, size=nb_fold, replace=False)))
+            print idx
+            train_score_tmp = []
+            test_score_tmp = []
+            for i in tqdm(range(nb_fold)):
+                train, test = gp.iloc[:idx[i]], gp.iloc[
+                    idx[i]:idx[i] + size_gap]
+                # fit the model
+                train_model = self.fit(name, train)
+                train.loc[train.index, 'yield_pred'] = train_model.fittedvalues
+                # get the score
+                train_score_tmp.append(
+                    self.get_information_fit(train, train_model))
+                # get the score
+                test_model = self.get_model(test, train_model)
+                test.loc[test.index, 'yield_pred'] = test_model.fittedvalues
+                test_score_tmp.append(
+                    self.get_information_fit(test, test_model))
+            final_model = self.fit(name, gp)
+            self.save_model_params(name, final_model)
+            self.update_main_df(gp, final_model)
+            print np.array(test_score_tmp).std(axis=0)
+            print np.array(test_score_tmp).mean(axis=0)
+            train_score.append(np.array(train_score_tmp).mean(axis=0))
+            test_score.append(np.array(test_score_tmp).mean(axis=0))
+        self.get_summary(train_score, split='train', CV=True)
+        self.get_summary(test_score, split='test', CV=True)
+
+        self.make_submission(self.df)
+
+        self.dump_final_config_file()
+
     def train(self):
         if self.mode != 'train':
             raise ValueError('run in training mode : mode=train')
@@ -195,8 +246,11 @@ class ArimaModel(BaseModel):
             for name, gp in self.dfgroup:
                 train, _ = train_test_split_rand_yield(gp)
                 # fit the model
-                self.fit(name, train)
+                train_model = self.fit(name, train)
+                self.get_rmse(train.feat_yield, train_model.fittedvalues)
                 # get the score
+                test_model = self.get_model(test, train_model)
+                self.get_rmse(test.feat_yield, test_model.fittedvalues)
 
             self.predict()
             self.make_submission(self.df)
@@ -208,13 +262,16 @@ class ArimaModel(BaseModel):
             self.get_summary(test_score, split='test')
         self.dump_final_config_file()
 
-    def get_summary(self, score, split='train'):
+    def get_summary(self, score, split='train', CV=False):
         if self.verbose > 0:
             print '%s summary:' % (split)
         score = np.mean(np.array(score), axis=0)
         score_key = ['rmse', 'aic', 'bic', 'hqic']
         for i, key in enumerate(score_key):
-            setattr(self, split + '_' + key, score[i])
+            if CV:
+                setattr(self, 'CV_' + split + '_' + key, score[i])
+            else:
+                setattr(self, split + '_' + key, score[i])
             if self.verbose > 0:
                 print('    %s : %1.3f' % (key, score[i]))
 
@@ -229,5 +286,9 @@ class ArimaModel(BaseModel):
 
     def get_rmse(self, df, against='yield_pred'):
 
-        df = df[['yield', against]].dropna()
-        return np.sqrt(mean_squared_error(df['yield'], df['yield_pred']))
+        dff = df[['yield', against]].dropna()
+        try:
+            return np.sqrt(mean_squared_error(dff['yield'], dff['yield_pred']))
+        except:
+            print df['yield_pred']
+            return 2
