@@ -74,17 +74,21 @@ class DiffTransformer(TransformerMixin, BaseEstimator):
 class AutoArimaInputer(TransformerMixin, BaseEstimator):
 
     def transform(self, X):
-        X = add_group_column_to_data(pd.DataFrame(X))
-        bestfits = []
-        for i, (name, gp) in enumerate(X.groupby('group')):
-            gp_tmp = gp.drop('group', axis=1)
-            array = np.array(gp_tmp)
-            bestfit = np.apply_along_axis(
-                self.fit_best_ARIMA, axis=0, arr=array)
-            assert bestfit.shape == array.shape
-            print bestfit.shape
-            bestfits.append(bestfit)
-        return reduce(lambda x, y: np.vstack((x, y)), bestfits)
+        array = np.array(X)
+        return np.apply_along_axis(
+            self.fit_best_ARIMA, axis=0, arr=array)
+
+        # X = add_group_column_to_data(pd.DataFrame(X))
+        # bestfits = []
+        # for i, (name, gp) in enumerate(X.groupby('group')):
+        #     gp_tmp = gp.drop('group', axis=1)
+        #     array = np.array(gp_tmp)
+        #     bestfit = np.apply_along_axis(
+        #         self.fit_best_ARIMA, axis=0, arr=array)
+        #     assert bestfit.shape == array.shape
+        #     print bestfit.shape
+        #     bestfits.append(bestfit)
+        # return reduce(lambda x, y: np.vstack((x, y)), bestfits)
 
     def fit(self, X, y=None):
         return self
@@ -266,12 +270,12 @@ def build_entire_pipeline(pipe_list, pipe_kwargs, df_indexer, pca_components=0):
     Indexer to return a dataframe with the good
     index and the necessary columns
     '''
-    try:
-        assert pipe_list.keys() == pipe_kwargs.keys()
-        features = FeatureUnion([(key, build_one_pipeline(
-            pipe_list[key], pipe_kwargs[key])) for key in pipe_list.keys()])
-    except:
-        raise ValueError('You pipe_list is fucked up')
+    # try:
+    assert pipe_list.keys() == pipe_kwargs.keys()
+    features = FeatureUnion([(key, build_one_pipeline(
+        pipe_list[key], pipe_kwargs[key])) for key in pipe_list.keys()])
+    # except:
+    #     raise ValueError('You pipe_list is fucked up')
 
     if pipe_list.keys()[-1] == 'yield':
         pipe = Pipeline([
