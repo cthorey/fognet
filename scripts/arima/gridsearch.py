@@ -53,16 +53,20 @@ def train_model_with_oscar(conf, scientist, experiment):
     conf = update_dict(conf, parameters)
     model = ArimaModel(config=conf, mode='train', hp=parameters.keys())
     model.train_CV(nb_folds=model.nb_folds)
-    if model.test_rmse > 3:
+    if model.CV_test_rmse > 3:
         loss = 3
     else:
         loss = model.CV_test_rmse
     results = {'loss': loss}
     result_keys = ['rmse', 'aic', 'bic', 'hqic']
-    results.update({'train_%s' % (key): getattr(
+    results.update({'CV_train_%s' % (key): getattr(
         model, 'CV_train_%s' % (key)) for key in result_keys})
-    results.update({'test_%s' % (key): getattr(
+    results.update({'CV_std_train_%s' % (key): getattr(
+        model, 'CV_stdtrain_%s' % (key)) for key in result_keys})
+    results.update({'CV_test_%s' % (key): getattr(
         model, 'CV_test_%s' % (key)) for key in result_keys})
+    results.update({'CV_std_test_%s' % (key): getattr(
+        model, 'CV_stdtest_%s' % (key)) for key in result_keys})
     scientist.update(job, results)
 
 if __name__ == '__main__':
@@ -85,6 +89,7 @@ if __name__ == '__main__':
             'description': config['description'],
             'parameters': config['parameters_def']
         }
+        print experiment
         # Parallel(n_jobs=config['nb_cpus'])(delayed(train_model_with_oscar)(
         #     config, scientist, experiment) for i in range(200))
         while True:
