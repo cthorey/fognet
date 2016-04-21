@@ -13,8 +13,8 @@ from utils import pipe_def_arima
 # Definition
 
 # Description
-experiment_name = 'SARIMAX/model_0/bbking',
-description = 'Base model that works best for the moment'
+experiment_name = 'SARIMAX/model_7/bbking',
+description = 'Run experiments'
 
 # Oscar grid
 parameters_def = {'AR': {'min': 0, 'max': 6, 'step': 1},

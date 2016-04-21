@@ -92,10 +92,9 @@ if __name__ == '__main__':
 
     elif config['search_method'] == 'brut':
         iterator = conf_generator(config)
-        for conf in iterator:
-            train_model(conf)
+        # for conf in iterator:
+        #     train_model(conf)
+        Parallel(n_jobs=config['nb_cpus'])(delayed(train_model)(
+            conf) for conf in iterator)
     else:
         raise ValueError()
-
-        # Parallel(n_jobs=config['nb_cpus'])(delayed(train_model)(
-        #     conf, parameters_grid.keys()) for conf in confs)
