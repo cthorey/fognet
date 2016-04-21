@@ -14,8 +14,8 @@ from utils import pipe_def_arima
 
 # Description
 
-experiment_name = 'SARIMAX/model_1/clavius'
-description = 'Run experiments'
+experiment_name = 'SARIMAX/model_2/clavius'
+description = 'Run experiments with seasonal order'
 
 # Oscar grid
 parameters_def = {'AR': {'min': 0, 'max': 6, 'step': 1},
@@ -26,12 +26,13 @@ parameters_def = {'AR': {'min': 0, 'max': 6, 'step': 1},
                               'EWMAMissingValueInputer',
                               'AutoArimaInputer'],
                   'num_lags_regressors': {'min': 1, 'max': 6, 'step': 1},
-                  'seasonal_inter_lags': [1, 12, 24]}
+                  'seasonal_inter_lags': [1, 12, 24],
+                  'Season_AR': {'min': 0, 'max': 2, 'step': 1},
+                  'Season_D': [0, 1],
+                  'Season_MA': {'min': 0, 'max': 2, 'step': 1},
+                  'Season_Period': [1, 12]}
 
-# 'Season_AR': {'min': 0, 'max': 12, 'step': 1},
-# 'Season_D': [0, 1],
-# 'Season_MA': {'min': 0, 'max': 12, 'step': 1},
-# 'Season_Period': [1, 6, 12]}
+
 # Brut grid
 parameters_grid = {'AR': range(7),
                    'D': [0, 1],
