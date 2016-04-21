@@ -13,7 +13,7 @@ from utils import pipe_def_arima
 # Definition
 
 # Description
-experiment_name = 'SARIMAX/model_7/bbking',
+experiment_name = 'SARIMAX/model_0/clavius',
 description = 'Run experiments'
 
 # Oscar grid
