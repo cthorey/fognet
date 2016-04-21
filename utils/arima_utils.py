@@ -31,7 +31,8 @@ class ArimaModel(BaseModel):
             raise ValueError()
         else:
             config.update(kwargs)
-            hp = kwargs.keys()
+            if len(kwargs.keys()) != 0:
+                hp = kwargs.keys()
         super(ArimaModel, self).__init__(
             config, mode=mode, hp=hp, verbose=verbose)
         self.init_pipe()
@@ -42,26 +43,31 @@ class ArimaModel(BaseModel):
     def init_pipe(self):
         mpipe = Pipe()
         # Pipe_list_0
+        # Lags normal
         pipe_list_0 = ['FeatureSelector',
                        str(self.inputer),
                        'CreateLagArrays',
                        'FillRemainingNaN',
                        'StandardScaler']
         pipe_kwargs_0 = {'FeatureSelector__features': self.features_base,
-                         'CreateLagArrays__lags': self.num_lags_regressors}
-        # Pipe_list_1
-        pipe_list_1 = pipe_list_0
-        feature_extra = [
-            f for f in self.numerical_feature if f not in self.features_base]
-        self.features_extra = random.sample(
-            feature_extra, self.num_features_extra)
+                         'CreateLagArrays__lags': self.num_lags_regressors,
+                         'CreateLagArrays__inter_lags': self.seasonal_inter_lags}
+        pipe_list = {'pipe_0': pipe_list_0}
+        pipe_kwargs = {'pipe_0': pipe_kwargs_0}
 
-        pipe_kwargs_1 = {'FeatureSelector__features': self.features_extra,
-                         'CreateLagArrays__lags': self.num_lags_regressors}
-        pipe_list = {'pipe_0': pipe_list_0,
-                     'pipe_1': pipe_list_1}
-        pipe_kwargs = {'pipe_0': pipe_kwargs_0,
-                       'pipe_1': pipe_kwargs_1}
+        if self.num_features_extra > 0:
+            # Pipe_list_1
+            pipe_list_1 = pipe_list_0
+            feature_extra = [
+                f for f in self.numerical_feature if f not in self.features_base]
+            self.features_extra = random.sample(
+                feature_extra, self.num_features_extra)
+            pipe_kwargs_1 = {'FeatureSelector__features': self.features_extra,
+                             'CreateLagArrays__lags': self.num_lags_regressors,
+                             'CreateLagArrays__inter_lags': self.seasonal_inter_lags}
+            pipe_list.update({'pipe_1': pipe_list_1})
+            pipe_kwargs.update({'pipe_1': pipe_kwargs_1})
+
         self.pipe = mpipe(pipe_list, pipe_kwargs)
 
     def init_data(self):
@@ -208,43 +214,47 @@ class ArimaModel(BaseModel):
                                  fit_results.hqic,
                                  fit_results.nobs))
 
-    def train_CV(self, nb_fold=5, size_gap=96, seed=91):
+    def train_CV(self, nb_folds=10, size_gap=96, seed=91):
         if self.mode != 'train':
             raise ValueError('run in training mode : mode=train')
         randgen = np.random.RandomState(seed)
         gp = self.df.copy()
         n = len(gp)
         # CV
-        idx = np.array(range(96 * 2, n))
-        mask = np.array(gp.iloc[96 * 2:n]['yield'].apply(np.isnan))
-        possible_values = idx[~mask]  # idx where yield is not nan
-        idx = list(np.sort(randgen.choice(
-            possible_values, size=nb_fold, replace=False)))
-        print idx
-        train_score = []
-        test_score = []
-        for i in tqdm(range(nb_fold)):
-            train, test = gp.iloc[:idx[i]], gp.iloc[
-                idx[i]:idx[i] + size_gap]
-            # fit the model
-            train_model = self.fit(train)
-            train.loc[train.index, 'yield_pred'] = train_model.fittedvalues
-            # get the score
-            train_score.append(
-                self.get_information_fit(train, train_model))
-            # get the score
-            test_model = self.get_model(test, train_model)
-            test.loc[test.index, 'yield_pred'] = test_model.fittedvalues
-            test_score.append(
-                self.get_information_fit(test, test_model))
-        final_model = self.fit(gp)
-        self.save_model_params(final_model)
-        self.update_main_df(gp, final_model)
-        self.get_summary(train_score, split='train', CV=True)
-        self.get_summary(test_score, split='test', CV=True)
-
-        self.make_submission(self.df)
-
+        try:
+            idx = np.array(range(96 * 2, n))
+            mask = np.array(gp.iloc[96 * 2:n]['yield'].apply(np.isnan))
+            possible_values = idx[~mask]  # idx where yield is not nan
+            idx = list(np.sort(randgen.choice(
+                possible_values, size=nb_folds, replace=False)))
+            train_score = []
+            test_score = []
+            for i in tqdm(range(nb_folds)):
+                train, test = gp.iloc[:idx[i]], gp.iloc[
+                    idx[i]:idx[i] + size_gap]
+                # fit the model
+                train_model = self.fit(train)
+                train.loc[train.index, 'yield_pred'] = train_model.fittedvalues
+                # get the score
+                train_score.append(
+                    self.get_information_fit(train, train_model))
+                # get the score
+                test_model = self.get_model(test, train_model)
+                test.loc[test.index, 'yield_pred'] = test_model.fittedvalues
+                test_score.append(
+                    self.get_information_fit(test, test_model))
+            final_model = self.fit(gp)
+            self.save_model_params(final_model)
+            self.update_main_df(gp, final_model)
+            self.get_summary(train_score, split='train', CV=True)
+            self.get_summary(test_score, split='test', CV=True)
+            self.make_submission(self.df)
+        except:
+            train_score = 1e5 * np.ones((1, 5))
+            test_score = 1e5 * np.ones((1, 5))
+            test_score[0] = 3
+            self.get_summary(train_score, split='train')
+            self.get_summary(test_score, split='test')
         self.dump_final_config_file()
 
     def get_summary(self, score, split='train', CV=True):
@@ -455,7 +465,7 @@ class ArimaModelGroup(BaseModel):
                                  fit_results.hqic,
                                  fit_results.nobs))
 
-    def train_CV(self, nb_fold=5, size_gap=96, seed=91):
+    def train_CV(self, nb_folds=5, size_gap=96, seed=91):
         if self.mode != 'train':
             raise ValueError('run in training mode : mode=train')
         randgen = np.random.RandomState(seed)

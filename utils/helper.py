@@ -60,7 +60,12 @@ def control_type_parameter_arima(parameters):
                           'Season_MA',
                           'Season_D',
                           'Season_Period',
-                          'pca_components']})
+                          'pca_components',
+                          'num_features_extra',
+                          'num_lags_regressors',
+                          'seasonal_inter_lags']})
+    dict_type.update({f: str for f in ['inputer']})
+
     return {key: dict_type[key](val) for key, val in parameters.iteritems()}
 
 

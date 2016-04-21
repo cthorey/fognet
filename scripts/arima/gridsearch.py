@@ -12,6 +12,7 @@ from multiprocessing import cpu_count
 from random import shuffle
 from utils import pipe_def
 from Oscar import Oscar
+import pprint
 
 
 def update_dict(config, new_parameters):
@@ -30,15 +31,17 @@ def conf_generator(config):
     parameters_grid = config['parameters_grid']
     product = [x for x in apply(itertools.product, parameters_grid.values())]
     conf_runs = [dict(zip(parameters_grid.keys(), p)) for p in product]
-    confs = map(lambda d: update_dict(config, d), conf_runs)
-    shuffle(confs)
-    return confs
+    idxs = range(len(conf_runs))
+    np.random.shuffle(idxs)
+    for idx in idxs:
+        yield update_dict(config, conf_runs[idx])
 
 
 def train_model(conf):
-    model = ArimaModel(config=conf, mode='train',
-                       hp=conf['parameters_grid'].keys())
-    model.train()
+    hp = config['parameters_grid'].keys()
+    pprint.pprint({key: conf[key] for key in hp})
+    model = ArimaModel(config=conf, hp=hp)
+    model.train_CV(nb_folds=model.nb_folds)
 
 
 def train_model_with_oscar(conf, scientist, experiment):
@@ -49,17 +52,17 @@ def train_model_with_oscar(conf, scientist, experiment):
     parameters = control_type_parameter_arima(new_parameters)
     conf = update_dict(conf, parameters)
     model = ArimaModel(config=conf, mode='train', hp=parameters.keys())
-    model.train()
+    model.train_CV(nb_folds=model.nb_folds)
     if model.test_rmse > 3:
         loss = 3
     else:
-        loss = model.test_rmse
+        loss = model.CV_test_rmse
     results = {'loss': loss}
     result_keys = ['rmse', 'aic', 'bic', 'hqic']
     results.update({'train_%s' % (key): getattr(
-        model, 'train_%s' % (key)) for key in result_keys})
+        model, 'CV_train_%s' % (key)) for key in result_keys})
     results.update({'test_%s' % (key): getattr(
-        model, 'test_%s' % (key)) for key in result_keys})
+        model, 'CV_test_%s' % (key)) for key in result_keys})
     scientist.update(job, results)
 
 if __name__ == '__main__':
@@ -88,9 +91,8 @@ if __name__ == '__main__':
             train_model_with_oscar(config, scientist, experiment)
 
     elif config['search_method'] == 'brut':
-        confs = conf_generator(config)
-        print 'We are going to run %d different models' % (len(confs))
-        for conf in confs:
+        iterator = conf_generator(config)
+        for conf in iterator:
             train_model(conf)
     else:
         raise ValueError()

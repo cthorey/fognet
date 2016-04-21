@@ -173,6 +173,8 @@ class CreateLagArrays(TransformerMixin, BaseEstimator):
     if lags =3, then 0,1,2 lags  !'''
 
     def __init__(self, lags=3, inter_lags=1, pad_values=np.nan):
+        if lags == 0:
+            lags = 1
         self.lags = lags
         self.pad_values = pad_values
         self.inter_lags = inter_lags
