@@ -101,8 +101,7 @@ class ArimaModel(BaseModel):
         self.ngroups = self.dfgroup.ngroups
 
     def init_parameter_saver(self):
-
-        for name in self.dfgroup.groups.keys():
+        if self.mode=='train':
             setattr(self, 'save',
                     SaveArimaParameters(getattr(self, 'model')))
 
@@ -124,9 +123,9 @@ class ArimaModel(BaseModel):
             setattr(self, 'model', path)
 
         if mode == 'inspection':
-            path = os.path.expanduser(getattr(self, 'model'))
+            path = os.path.expanduser(os.path.join(self.root,self.model_name,'model.pkl'))
             if self.verbose > 0:
-                print 'Loading model params for %s from %s' % (path)
+                print 'Loading model params for %s' % (path)
             with open(path) as f:
                 setattr(self, 'model', pickle.load(f))
 
@@ -196,16 +195,11 @@ class ArimaModel(BaseModel):
         df = self.merge_fitted_values(df, fitted_model.fittedvalues)
         self.df.loc[df.index, 'yield_pred'] = df.yield_pred.values
 
-    def predict(self):
-        train_score, test_score = [], []
-        for name, gp in self.dfgroup:
-            train, test = train_test_split_rand_yield(gp, verbose=self.verbose)
-            train_score.append(self.get_scores(name, train))
-            test_score.append(self.get_scores(name, test))
-            self.update_main_df(name, gp)
+    def predict(self, nb_folds=10, size_gap=96, seed=91):
 
-        self.get_summary(train_score, split='train')
-        self.get_summary(test_score, split='test')
+        gp = self.df.copy()
+        model = self.get_model(gp,self.model)
+        self.update_main_df(gp,model)
 
     def get_information_fit(self, df, fit_results):
         return map(replace_nan, (self.get_rmse(df),

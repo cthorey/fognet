@@ -42,10 +42,10 @@ def get_result_arima(root, hp=['h', 'reg', 'seq_length']):
             conf = parse_conf_file(os.path.join(path_model, 'conf_model.json'))
             result_keys = ['rmse', 'aic', 'bic', 'hqic']
             score = {}
-            score.update({'train_%s' % (key): conf[
-                         'train_%s' % (key)] for key in result_keys})
-            score.update({'test_%s' % (key): conf[
-                         'test_%s' % (key)] for key in result_keys})
+            score.update({'CV_train_%s' % (key): conf[
+                         'CV_train_%s' % (key)] for key in result_keys})
+            score.update({'CV_test_%s' % (key): conf[
+                         'CV_test_%s' % (key)] for key in result_keys})
             results.append([root, model] +
                            [conf[key] for key in hp] +
                            score.values())
@@ -54,6 +54,6 @@ def get_result_arima(root, hp=['h', 'reg', 'seq_length']):
 
     results = pd.DataFrame(
         results, columns=['root', 'model'] + hp + score.keys())
-    results = results.sort_values(by='test_rmse')
+    results = results.sort_values(by='CV_test_rmse')
     results.index = range(len(results))
     return results
